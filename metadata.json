@@ -1,0 +1,6 @@
+{
+  "name": "AI Job Finder & Application Assistant",
+  "description": "AI-powered job finder and application assistant for ICT and technology roles from jobsearchmalawi.com with CV analysis, matching, and cover letter generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

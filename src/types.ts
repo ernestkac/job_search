@@ -1,0 +1,153 @@
+export type ApplicationStatus = 
+  | 'New'
+  | 'Interested'
+  | 'Letter Generated'
+  | 'Applied'
+  | 'Interview'
+  | 'Rejected'
+  | 'Successful';
+
+export type JobCategory =
+  | 'IT Officer'
+  | 'ICT Officer'
+  | 'Systems Administrator'
+  | 'Network Administrator'
+  | 'Software Developer'
+  | 'Web Developer'
+  | 'Database Administrator'
+  | 'IT Support'
+  | 'ICT Technician'
+  | 'Cybersecurity'
+  | 'Information Systems'
+  | 'Systems Analyst'
+  | 'Database and SQL'
+  | 'Technical Project Management'
+  | 'Other ICT Role';
+
+export interface WorkExperience {
+  id: string;
+  jobTitle: string;
+  company: string;
+  location?: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  responsibilities: string[];
+}
+
+export interface Education {
+  id: string;
+  degree: string;
+  institution: string;
+  fieldOfStudy: string;
+  graduationYear: string;
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  issuingOrganization: string;
+  issueYear: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  technologiesUsed: string[];
+  link?: string;
+}
+
+export interface TechnicalSkills {
+  systemsAndOS: string[];
+  networking: string[];
+  softwareDevelopment: string[];
+  databasesAndSQL: string[];
+  cybersecurity: string[];
+  itSupportAndHardware: string[];
+  toolsAndFrameworks: string[];
+}
+
+export interface CandidateProfile {
+  fullName: string;
+  professionalTitle: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedIn?: string;
+  github?: string;
+  summary: string;
+  technicalSkills: TechnicalSkills;
+  workExperience: WorkExperience[];
+  education: Education[];
+  certifications: Certification[];
+  projects: Project[];
+  achievements: string[];
+  rawCvText?: string;
+  lastUpdated?: string;
+}
+
+export interface JobListing {
+  id: string;
+  title: string;
+  employer: string;
+  location: string;
+  closingDate: string; // YYYY-MM-DD
+  applicationMethod: string; // email address or application portal link
+  url: string;
+  rawDescription: string;
+  requiredQualifications: string[];
+  requiredTechnicalSkills: string[];
+  responsibilities: string[];
+  category: JobCategory;
+  postedDate: string;
+  workType?: 'On-site' | 'Remote' | 'Hybrid';
+  isExpired: boolean;
+  fingerprint: string;
+  sourceUrl?: string;
+}
+
+export interface JobMatchAnalysis {
+  jobId: string;
+  compatibilityScore: number; // 0 to 100
+  matchReasoning: string;
+  matchingSkills: string[];
+  missingOrWeakRequirements: string[];
+  candidateStrengths: string[];
+  gapSummary: string;
+  analyzedAt: string;
+}
+
+export interface TrackedApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  employer: string;
+  location: string;
+  status: ApplicationStatus;
+  applicationDate?: string;
+  closingDate: string;
+  applicationContact: string; // email or URL
+  generatedLetter?: string;
+  notes?: string;
+  followUpReminderDate?: string;
+  updatedAt: string;
+}
+
+export interface JobFilterState {
+  searchQuery: string;
+  category: string;
+  minScore: number;
+  location: string;
+  workType: string;
+  hideExpired: boolean;
+  statusFilter: string;
+}
+
+export interface SystemLogs {
+  id: string;
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  source: string;
+}
