@@ -1,9 +1,17 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { INITIAL_CANDIDATE_PROFILE, INITIAL_MOCK_JOBS } from "./src/data/mockJobs";
+import {
+  INITIAL_CANDIDATE_PROFILE,
+  INITIAL_MOCK_JOBS,
+} from "./src/data/mockJobs";
 import { CandidateProfile, JobListing, TrackedApplication } from "./src/types";
-import { analyzeJobMatchWithGemini, generateCoverLetterWithGemini, parseCvWithGemini } from "./server/gemini";
+import {
+  analyzeJobMatchWithGemini,
+  generateCoverLetterWithGemini,
+  parseCvWithGemini,
+} from "./server/gemini";
 import { fetchJobSearchMalawiJobs, scrapeSingleJobUrl } from "./server/scraper";
 
 // In-memory data persistence store
@@ -20,9 +28,10 @@ let storedApplications: TrackedApplication[] = [
     applicationDate: "2026-07-22",
     closingDate: "2026-08-15",
     applicationContact: "vacancies@natbank.mw",
-    notes: "Requires MCSA or RHCSA certification. Verified background alignment.",
-    updatedAt: new Date().toISOString()
-  }
+    notes:
+      "Requires MCSA or RHCSA certification. Verified background alignment.",
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 async function startServer() {
@@ -38,7 +47,11 @@ async function startServer() {
 
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString(), service: "AI Job Finder & Application Assistant" });
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      service: "AI Job Finder & Application Assistant",
+    });
   });
 
   // GET /api/jobs - List active ICT job opportunities
@@ -47,10 +60,17 @@ async function startServer() {
       const refresh = req.query.refresh === "true";
       const fetchedJobs = await fetchJobSearchMalawiJobs(refresh);
       storedJobListings = fetchedJobs;
-      res.json({ success: true, jobs: storedJobListings, count: storedJobListings.length });
+      res.json({
+        success: true,
+        jobs: storedJobListings,
+        count: storedJobListings.length,
+      });
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to fetch jobs." });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch jobs.",
+      });
     }
   });
 
@@ -59,26 +79,40 @@ async function startServer() {
     try {
       const { url } = req.body;
       if (!url) {
-        return res.status(400).json({ success: false, error: "URL parameter is required." });
+        return res
+          .status(400)
+          .json({ success: false, error: "URL parameter is required." });
       }
 
       const scrapedJob = await scrapeSingleJobUrl(url);
       if (!scrapedJob) {
-        return res.status(404).json({ success: false, error: "Could not extract vacancy details from URL." });
+        return res.status(404).json({
+          success: false,
+          error: "Could not extract vacancy details from URL.",
+        });
       }
 
       // De-duplicate against stored jobs
-      const existsIndex = storedJobListings.findIndex(j => j.fingerprint === scrapedJob.fingerprint || j.url === url);
+      const existsIndex = storedJobListings.findIndex(
+        (j) => j.fingerprint === scrapedJob.fingerprint || j.url === url,
+      );
       if (existsIndex >= 0) {
         storedJobListings[existsIndex] = scrapedJob;
       } else {
         storedJobListings.unshift(scrapedJob);
       }
 
-      res.json({ success: true, job: scrapedJob, message: "Successfully ingested job vacancy." });
+      res.json({
+        success: true,
+        job: scrapedJob,
+        message: "Successfully ingested job vacancy.",
+      });
     } catch (error: any) {
       console.error("Error scraping job URL:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to parse URL." });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to parse URL.",
+      });
     }
   });
 
@@ -92,13 +126,20 @@ async function startServer() {
     try {
       const updatedProfile = req.body;
       if (!updatedProfile || !updatedProfile.fullName) {
-        return res.status(400).json({ success: false, error: "Valid candidate profile object is required." });
+        return res.status(400).json({
+          success: false,
+          error: "Valid candidate profile object is required.",
+        });
       }
       storedCandidateProfile = {
         ...updatedProfile,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
-      res.json({ success: true, profile: storedCandidateProfile, message: "Profile saved successfully." });
+      res.json({
+        success: true,
+        profile: storedCandidateProfile,
+        message: "Profile saved successfully.",
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -109,7 +150,10 @@ async function startServer() {
     try {
       const { rawText, fileBase64, mimeType } = req.body;
       if (!rawText && !fileBase64) {
-        return res.status(400).json({ success: false, error: "Either CV text content or uploaded file base64 is required." });
+        return res.status(400).json({
+          success: false,
+          error: "Either CV text content or uploaded file base64 is required.",
+        });
       }
 
       const parsedData = await parseCvWithGemini(rawText, fileBase64, mimeType);
@@ -118,18 +162,21 @@ async function startServer() {
       storedCandidateProfile = {
         ...storedCandidateProfile,
         ...parsedData,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       } as CandidateProfile;
 
       res.json({
         success: true,
         profile: storedCandidateProfile,
         parsedData,
-        message: "CV successfully analyzed and candidate profile created."
+        message: "CV successfully analyzed and candidate profile created.",
       });
     } catch (error: any) {
       console.error("CV Parsing Error:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to analyze CV with AI." });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to analyze CV with AI.",
+      });
     }
   });
 
@@ -137,17 +184,26 @@ async function startServer() {
   app.post("/api/jobs/match", async (req, res) => {
     try {
       const { jobId, customJob } = req.body;
-      const targetJob: JobListing | undefined = customJob || storedJobListings.find(j => j.id === jobId);
+      const targetJob: JobListing | undefined =
+        customJob || storedJobListings.find((j) => j.id === jobId);
 
       if (!targetJob) {
-        return res.status(404).json({ success: false, error: "Job listing not found." });
+        return res
+          .status(404)
+          .json({ success: false, error: "Job listing not found." });
       }
 
-      const matchAnalysis = await analyzeJobMatchWithGemini(storedCandidateProfile, targetJob);
+      const matchAnalysis = await analyzeJobMatchWithGemini(
+        storedCandidateProfile,
+        targetJob,
+      );
       res.json({ success: true, match: matchAnalysis });
     } catch (error: any) {
       console.error("Job Matching Error:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to run job match analysis." });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to run job match analysis.",
+      });
     }
   });
 
@@ -155,19 +211,29 @@ async function startServer() {
   app.post("/api/jobs/generate-letter", async (req, res) => {
     try {
       const { jobId, customNote, customJob } = req.body;
-      const targetJob: JobListing | undefined = customJob || storedJobListings.find(j => j.id === jobId);
+      const targetJob: JobListing | undefined =
+        customJob || storedJobListings.find((j) => j.id === jobId);
 
       if (!targetJob) {
-        return res.status(404).json({ success: false, error: "Job listing not found." });
+        return res
+          .status(404)
+          .json({ success: false, error: "Job listing not found." });
       }
 
-      const generatedLetter = await generateCoverLetterWithGemini(storedCandidateProfile, targetJob, customNote);
+      const generatedLetter = await generateCoverLetterWithGemini(
+        storedCandidateProfile,
+        targetJob,
+        customNote,
+      );
 
       // Automatically record/update tracked application state
-      let appRecord = storedApplications.find(a => a.jobId === targetJob.id);
+      let appRecord = storedApplications.find((a) => a.jobId === targetJob.id);
       if (appRecord) {
         appRecord.generatedLetter = generatedLetter;
-        appRecord.status = appRecord.status === "New" || appRecord.status === "Interested" ? "Letter Generated" : appRecord.status;
+        appRecord.status =
+          appRecord.status === "New" || appRecord.status === "Interested"
+            ? "Letter Generated"
+            : appRecord.status;
         appRecord.updatedAt = new Date().toISOString();
       } else {
         appRecord = {
@@ -181,7 +247,7 @@ async function startServer() {
           closingDate: targetJob.closingDate,
           applicationContact: targetJob.applicationMethod,
           generatedLetter: generatedLetter,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
         storedApplications.push(appRecord);
       }
@@ -190,17 +256,24 @@ async function startServer() {
         success: true,
         letter: generatedLetter,
         applicationRecord: appRecord,
-        message: "Application letter generated successfully."
+        message: "Application letter generated successfully.",
       });
     } catch (error: any) {
       console.error("Letter Generation Error:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to generate application letter." });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to generate application letter.",
+      });
     }
   });
 
   // GET /api/applications - List tracked job applications
   app.get("/api/applications", (_req, res) => {
-    res.json({ success: true, applications: storedApplications, count: storedApplications.length });
+    res.json({
+      success: true,
+      applications: storedApplications,
+      count: storedApplications.length,
+    });
   });
 
   // POST /api/applications - Create or update tracked application
@@ -208,25 +281,33 @@ async function startServer() {
     try {
       const appData: TrackedApplication = req.body;
       if (!appData.jobId) {
-        return res.status(400).json({ success: false, error: "Job ID is required." });
+        return res
+          .status(400)
+          .json({ success: false, error: "Job ID is required." });
       }
 
-      const index = storedApplications.findIndex(a => a.id === appData.id || a.jobId === appData.jobId);
+      const index = storedApplications.findIndex(
+        (a) => a.id === appData.id || a.jobId === appData.jobId,
+      );
       if (index >= 0) {
         storedApplications[index] = {
           ...storedApplications[index],
           ...appData,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
       } else {
         storedApplications.push({
           ...appData,
           id: appData.id || `app-${Date.now()}`,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         });
       }
 
-      res.json({ success: true, applications: storedApplications, message: "Application tracked successfully." });
+      res.json({
+        success: true,
+        applications: storedApplications,
+        message: "Application tracked successfully.",
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -235,8 +316,12 @@ async function startServer() {
   // DELETE /api/applications/:id - Remove tracked application
   app.delete("/api/applications/:id", (req, res) => {
     const { id } = req.params;
-    storedApplications = storedApplications.filter(a => a.id !== id);
-    res.json({ success: true, applications: storedApplications, message: "Application removed from tracker." });
+    storedApplications = storedApplications.filter((a) => a.id !== id);
+    res.json({
+      success: true,
+      applications: storedApplications,
+      message: "Application removed from tracker.",
+    });
   });
 
   // ==========================================
