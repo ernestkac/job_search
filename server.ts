@@ -1,5 +1,12 @@
 import "dotenv/config";
 import express from "express";
+import {
+  initializeDatabase,
+  getCandidateProfile,
+  saveCandidateProfile,
+  updateCandidateProfile,
+  deleteCandidateProfile,
+} from "./server/db";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import {
@@ -14,8 +21,38 @@ import {
 } from "./server/gemini";
 import { fetchJobSearchMalawiJobs, scrapeSingleJobUrl } from "./server/scraper";
 
-// In-memory data persistence store
-let storedCandidateProfile: CandidateProfile = { ...INITIAL_CANDIDATE_PROFILE };
+let profileId = 1;
+let storedCandidateProfile: CandidateProfile;
+
+try {
+  await initializeDatabase();
+} catch (error) {
+  console.error("Failed to initialize database:", error);
+  process.exit(1);
+}
+
+try {
+  const existingProfile = await getCandidateProfile(profileId);
+
+  if (existingProfile && Object.keys(existingProfile).length > 0) {
+    storedCandidateProfile = existingProfile;
+  } else {
+    storedCandidateProfile = {
+      ...INITIAL_CANDIDATE_PROFILE,
+    };
+
+    await saveCandidateProfile(storedCandidateProfile);
+  }
+} catch (err) {
+  console.error("Error retrieving candidate profile:", err);
+
+  storedCandidateProfile = {
+    ...INITIAL_CANDIDATE_PROFILE,
+  };
+
+  await saveCandidateProfile(storedCandidateProfile);
+}
+
 let storedJobListings: JobListing[] = [...INITIAL_MOCK_JOBS];
 let storedApplications: TrackedApplication[] = [
   {
@@ -135,6 +172,9 @@ async function startServer() {
         ...updatedProfile,
         lastUpdated: new Date().toISOString(),
       };
+      updateCandidateProfile(profileId, storedCandidateProfile).catch((err) => {
+        console.error("Error updating candidate profile in database:", err);
+      });
       res.json({
         success: true,
         profile: storedCandidateProfile,

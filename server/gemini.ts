@@ -11,7 +11,7 @@ const getGeminiClient = () => {
     apiKey: apiKey || "",
     httpOptions: {
       headers: {
-        'User-Agent': 'aistudio-build',
+        "User-Agent": "aistudio-build",
       },
     },
   });
@@ -22,7 +22,7 @@ const getGeminiClient = () => {
  */
 async function callGeminiWithRetry<T>(
   fn: () => Promise<T>,
-  maxRetries = 2
+  maxRetries = 2,
 ): Promise<T> {
   let attempt = 0;
   while (true) {
@@ -31,17 +31,19 @@ async function callGeminiWithRetry<T>(
     } catch (error: any) {
       attempt++;
       const isRateLimit =
-        error?.status === 'RESOURCE_EXHAUSTED' ||
+        error?.status === "RESOURCE_EXHAUSTED" ||
         error?.code === 429 ||
-        (typeof error?.message === 'string' &&
-          (error.message.includes('429') ||
-           error.message.includes('RESOURCE_EXHAUSTED') ||
-           error.message.includes('quota')));
+        (typeof error?.message === "string" &&
+          (error.message.includes("429") ||
+            error.message.includes("RESOURCE_EXHAUSTED") ||
+            error.message.includes("quota")));
 
       if (isRateLimit && attempt <= maxRetries) {
         let delayMs = 2500 * Math.pow(2, attempt); // 5s, 10s
         if (error?.details && Array.isArray(error.details)) {
-          const retryInfo = error.details.find((d: any) => d['@type']?.includes('RetryInfo'));
+          const retryInfo = error.details.find((d: any) =>
+            d["@type"]?.includes("RetryInfo"),
+          );
           if (retryInfo?.retryDelay) {
             const seconds = parseInt(retryInfo.retryDelay, 10);
             if (!isNaN(seconds) && seconds > 0) {
@@ -49,7 +51,9 @@ async function callGeminiWithRetry<T>(
             }
           }
         }
-        console.warn(`Gemini API 429 rate limit hit. Retrying attempt ${attempt}/${maxRetries} after ${delayMs}ms...`);
+        console.warn(
+          `Gemini API 429 rate limit hit. Retrying attempt ${attempt}/${maxRetries} after ${delayMs}ms...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       } else {
         throw error;
@@ -63,7 +67,7 @@ async function callGeminiWithRetry<T>(
  */
 export function calculateHeuristicJobMatch(
   profile: CandidateProfile,
-  job: JobListing
+  job: JobListing,
 ): JobMatchAnalysis {
   const candidateSkillList: string[] = [];
   if (profile.technicalSkills) {
@@ -80,28 +84,43 @@ export function calculateHeuristicJobMatch(
 
   jobReqSkills.forEach((req) => {
     const reqLower = req.toLowerCase().trim();
-    if (candidateSkillList.some((cs) => cs.includes(reqLower) || reqLower.includes(cs))) {
+    if (
+      candidateSkillList.some(
+        (cs) => cs.includes(reqLower) || reqLower.includes(cs),
+      )
+    ) {
       matching.push(req);
     } else {
       missing.push(req);
     }
   });
 
-  const matchRatio = jobReqSkills.length > 0 ? matching.length / jobReqSkills.length : 0.75;
+  const matchRatio =
+    jobReqSkills.length > 0 ? matching.length / jobReqSkills.length : 0.75;
   let score = Math.round(62 + matchRatio * 32);
   score = Math.min(98, Math.max(55, score));
 
   return {
     jobId: job.id,
     compatibilityScore: score,
-    matchReasoning: `Candidate profile demonstrates background overlap with ${job.title} specifications (${matching.slice(0, 3).join(', ') || 'Core ICT skills'}). Analyzed against profile skills and job details.`,
-    matchingSkills: matching.length > 0 ? matching : (profile.technicalSkills?.systemsAndOS || ['ICT Systems Administration', 'IT Infrastructure']),
-    missingOrWeakRequirements: missing.length > 0 ? missing : ['Vendor Advanced Certifications'],
+    matchReasoning: `Candidate profile demonstrates background overlap with ${job.title} specifications (${matching.slice(0, 3).join(", ") || "Core ICT skills"}). Analyzed against profile skills and job details.`,
+    matchingSkills:
+      matching.length > 0
+        ? matching
+        : profile.technicalSkills?.systemsAndOS || [
+            "ICT Systems Administration",
+            "IT Infrastructure",
+          ],
+    missingOrWeakRequirements:
+      missing.length > 0 ? missing : ["Vendor Advanced Certifications"],
     candidateStrengths: [
-      `${profile.professionalTitle || 'IT Specialist'} background with verified skills`,
-      `Experience in ${profile.technicalSkills?.systemsAndOS?.[0] || 'Systems'} and ${profile.technicalSkills?.networking?.[0] || 'Networking'}`,
+      `${profile.professionalTitle || "IT Specialist"} background with verified skills`,
+      `Experience in ${profile.technicalSkills?.systemsAndOS?.[0] || "Systems"} and ${profile.technicalSkills?.networking?.[0] || "Networking"}`,
     ],
-    gapSummary: missing.length > 0 ? `Areas for growth: ${missing.slice(0, 3).join(', ')}.` : 'Strong overall qualification alignment.',
+    gapSummary:
+      missing.length > 0
+        ? `Areas for growth: ${missing.slice(0, 3).join(", ")}.`
+        : "Strong overall qualification alignment.",
     analyzedAt: new Date().toISOString(),
   };
 }
@@ -112,18 +131,24 @@ export function calculateHeuristicJobMatch(
 export function generateHeuristicCoverLetter(
   profile: CandidateProfile,
   job: JobListing,
-  customNote?: string
+  customNote?: string,
 ): string {
-  const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const keySkills = [
     ...(profile.technicalSkills?.systemsAndOS || []),
     ...(profile.technicalSkills?.networking || []),
     ...(profile.technicalSkills?.softwareDevelopment || []),
-  ].slice(0, 5).join(', ');
+  ]
+    .slice(0, 5)
+    .join(", ");
 
-  return `${profile.fullName || 'Candidate'}
-${profile.email ? `Email: ${profile.email}` : ''} ${profile.phone ? `| Phone: ${profile.phone}` : ''}
-${profile.location || 'Malawi'}
+  return `${profile.fullName || "Candidate"}
+${profile.email ? `Email: ${profile.email}` : ""} ${profile.phone ? `| Phone: ${profile.phone}` : ""}
+${profile.location || "Malawi"}
 
 ${dateStr}
 
@@ -135,15 +160,15 @@ RE: APPLICATION FOR THE POSITION OF ${job.title.toUpperCase()}
 
 Dear Hiring Manager,
 
-I am writing to formally apply for the ${job.title} vacancy at ${job.employer}, as advertised. With my professional background as a ${profile.professionalTitle || 'Technology Specialist'} and demonstrated hands-on technical experience, I am confident in my ability to make a significant contribution to your organization.
+I am writing to formally apply for the ${job.title} vacancy at ${job.employer}, as advertised. With my professional background as a ${profile.professionalTitle || "Technology Specialist"} and demonstrated hands-on technical experience, I am confident in my ability to make a significant contribution to your organization.
 
-My qualifications align well with your requirements. In my career to date, I have gained practical expertise in ${keySkills || 'systems administration, networking, database management, and technical support'}. ${profile.summary ? profile.summary : ''}
+My qualifications align well with your requirements. In my career to date, I have gained practical expertise in ${keySkills || "systems administration, networking, database management, and technical support"}. ${profile.summary ? profile.summary : ""}
 
-${customNote ? `Additional notes regarding this application: ${customNote}\n\n` : ''}I am eager to bring my problem-solving skills and technical background to ${job.employer}. Thank you for reviewing my application. I look forward to the opportunity of discussing my qualifications in an interview.
+${customNote ? `Additional notes regarding this application: ${customNote}\n\n` : ""}I am eager to bring my problem-solving skills and technical background to ${job.employer}. Thank you for reviewing my application. I look forward to the opportunity of discussing my qualifications in an interview.
 
 Yours faithfully,
 
-${profile.fullName || 'Applicant'}`;
+${profile.fullName || "Applicant"}`;
 }
 
 /**
@@ -152,7 +177,7 @@ ${profile.fullName || 'Applicant'}`;
 export async function parseCvWithGemini(
   rawText?: string,
   fileBase64?: string,
-  mimeType?: string
+  mimeType?: string,
 ): Promise<Partial<CandidateProfile>> {
   const ai = getGeminiClient();
 
@@ -176,7 +201,7 @@ Return a structured JSON object.
   }
 
   contents.push({
-    text: `${promptText}\n\nCandidate Raw CV / Details Provided:\n${rawText || "See attached file above."}`
+    text: `${promptText}\n\nCandidate Raw CV / Details Provided:\n${rawText || "See attached file above."}`,
   });
 
   try {
@@ -200,15 +225,44 @@ Return a structured JSON object.
               technicalSkills: {
                 type: Type.OBJECT,
                 properties: {
-                  systemsAndOS: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  networking: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  softwareDevelopment: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  databasesAndSQL: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  cybersecurity: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  itSupportAndHardware: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  toolsAndFrameworks: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  systemsAndOS: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  networking: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  softwareDevelopment: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  databasesAndSQL: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  cybersecurity: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  itSupportAndHardware: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  toolsAndFrameworks: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
                 },
-                required: ["systemsAndOS", "networking", "softwareDevelopment", "databasesAndSQL", "cybersecurity", "itSupportAndHardware", "toolsAndFrameworks"],
+                required: [
+                  "systemsAndOS",
+                  "networking",
+                  "softwareDevelopment",
+                  "databasesAndSQL",
+                  "cybersecurity",
+                  "itSupportAndHardware",
+                  "toolsAndFrameworks",
+                ],
               },
               workExperience: {
                 type: Type.ARRAY,
@@ -221,9 +275,18 @@ Return a structured JSON object.
                     startDate: { type: Type.STRING },
                     endDate: { type: Type.STRING },
                     isCurrent: { type: Type.BOOLEAN },
-                    responsibilities: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    responsibilities: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
                   },
-                  required: ["jobTitle", "company", "startDate", "endDate", "responsibilities"],
+                  required: [
+                    "jobTitle",
+                    "company",
+                    "startDate",
+                    "endDate",
+                    "responsibilities",
+                  ],
                 },
               },
               education: {
@@ -236,7 +299,12 @@ Return a structured JSON object.
                     fieldOfStudy: { type: Type.STRING },
                     graduationYear: { type: Type.STRING },
                   },
-                  required: ["degree", "institution", "fieldOfStudy", "graduationYear"],
+                  required: [
+                    "degree",
+                    "institution",
+                    "fieldOfStudy",
+                    "graduationYear",
+                  ],
                 },
               },
               certifications: {
@@ -258,7 +326,10 @@ Return a structured JSON object.
                   properties: {
                     title: { type: Type.STRING },
                     description: { type: Type.STRING },
-                    technologiesUsed: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    technologiesUsed: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
                     link: { type: Type.STRING },
                   },
                   required: ["title", "description", "technologiesUsed"],
@@ -278,7 +349,7 @@ Return a structured JSON object.
             ],
           },
         },
-      })
+      }),
     );
 
     const parsed = JSON.parse(response.text || "{}");
@@ -286,8 +357,12 @@ Return a structured JSON object.
   } catch (err: any) {
     console.warn("CV AI Parsing fallback triggered:", err.message);
     const text = rawText || "";
-    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const phoneMatch = text.match(/(\+?\d{1,4}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/);
+    const emailMatch = text.match(
+      /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+    );
+    const phoneMatch = text.match(
+      /(\+?\d{1,4}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/,
+    );
 
     return {
       email: emailMatch ? emailMatch[0] : undefined,
@@ -302,7 +377,7 @@ Return a structured JSON object.
  */
 export async function analyzeJobMatchWithGemini(
   profile: CandidateProfile,
-  job: JobListing
+  job: JobListing,
 ): Promise<JobMatchAnalysis> {
   const ai = getGeminiClient();
 
@@ -359,9 +434,18 @@ TASK:
                 description: "Compatibility score from 0 to 100",
               },
               matchReasoning: { type: Type.STRING },
-              matchingSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
-              missingOrWeakRequirements: { type: Type.ARRAY, items: { type: Type.STRING } },
-              candidateStrengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+              matchingSkills: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              missingOrWeakRequirements: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              candidateStrengths: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
               gapSummary: { type: Type.STRING },
             },
             required: [
@@ -374,15 +458,20 @@ TASK:
             ],
           },
         },
-      })
+      }),
     );
 
     const parsed = JSON.parse(response.text || "{}");
 
     return {
       jobId: job.id,
-      compatibilityScore: Math.min(100, Math.max(0, parsed.compatibilityScore || 50)),
-      matchReasoning: parsed.matchReasoning || "Analyzed compatibility against ICT candidate profile.",
+      compatibilityScore: Math.min(
+        100,
+        Math.max(0, parsed.compatibilityScore || 50),
+      ),
+      matchReasoning:
+        parsed.matchReasoning ||
+        "Analyzed compatibility against ICT candidate profile.",
       matchingSkills: parsed.matchingSkills || [],
       missingOrWeakRequirements: parsed.missingOrWeakRequirements || [],
       candidateStrengths: parsed.candidateStrengths || [],
@@ -390,7 +479,10 @@ TASK:
       analyzedAt: new Date().toISOString(),
     };
   } catch (err: any) {
-    console.warn(`Job Match AI evaluation fallback used for ${job.id}:`, err.message);
+    console.warn(
+      `Job Match AI evaluation fallback used for ${job.id}:`,
+      err.message,
+    );
     return calculateHeuristicJobMatch(profile, job);
   }
 }
@@ -401,7 +493,7 @@ TASK:
 export async function generateCoverLetterWithGemini(
   profile: CandidateProfile,
   job: JobListing,
-  customNote?: string
+  customNote?: string,
 ): Promise<string> {
   const ai = getGeminiClient();
 
@@ -451,13 +543,17 @@ Generate the full formal application letter text now in Markdown format.
         config: {
           temperature: 0.3, // Lower temperature to ensure strict grounding
         },
-      })
+      }),
     );
 
-    return response.text || generateHeuristicCoverLetter(profile, job, customNote);
+    return (
+      response.text || generateHeuristicCoverLetter(profile, job, customNote)
+    );
   } catch (err: any) {
-    console.warn(`Cover Letter AI generation fallback used for ${job.id}:`, err.message);
+    console.warn(
+      `Cover Letter AI generation fallback used for ${job.id}:`,
+      err.message,
+    );
     return generateHeuristicCoverLetter(profile, job, customNote);
   }
 }
-
