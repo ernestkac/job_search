@@ -32,7 +32,9 @@ try {
 }
 
 try {
-  const existingProfile = await getCandidateProfile(profileId);
+  const existingProfile = (await getCandidateProfile(profileId)) as
+    | CandidateProfile
+    | null;
 
   if (existingProfile && Object.keys(existingProfile).length > 0) {
     storedCandidateProfile = existingProfile;
