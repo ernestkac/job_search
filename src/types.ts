@@ -1,28 +1,28 @@
-export type ApplicationStatus = 
-  | 'New'
-  | 'Interested'
-  | 'Letter Generated'
-  | 'Applied'
-  | 'Interview'
-  | 'Rejected'
-  | 'Successful';
+export type ApplicationStatus =
+  | "New"
+  | "Interested"
+  | "Letter Generated"
+  | "Applied"
+  | "Interview"
+  | "Rejected"
+  | "Successful";
 
 export type JobCategory =
-  | 'IT Officer'
-  | 'ICT Officer'
-  | 'Systems Administrator'
-  | 'Network Administrator'
-  | 'Software Developer'
-  | 'Web Developer'
-  | 'Database Administrator'
-  | 'IT Support'
-  | 'ICT Technician'
-  | 'Cybersecurity'
-  | 'Information Systems'
-  | 'Systems Analyst'
-  | 'Database and SQL'
-  | 'Technical Project Management'
-  | 'Other ICT Role';
+  | "IT Officer"
+  | "ICT Officer"
+  | "Systems Administrator"
+  | "Network Administrator"
+  | "Software Developer"
+  | "Web Developer"
+  | "Database Administrator"
+  | "IT Support"
+  | "ICT Technician"
+  | "Cybersecurity"
+  | "Information Systems"
+  | "Systems Analyst"
+  | "Database and SQL"
+  | "Technical Project Management"
+  | "Other ICT Role";
 
 export interface WorkExperience {
   id: string;
@@ -101,7 +101,7 @@ export interface JobListing {
   responsibilities: string[];
   category: JobCategory;
   postedDate: string;
-  workType?: 'On-site' | 'Remote' | 'Hybrid';
+  workType?: string; // e.g., Full-time, Part-time, Contract
   isExpired: boolean;
   fingerprint: string;
   sourceUrl?: string;
@@ -147,7 +147,7 @@ export interface JobFilterState {
 export interface SystemLogs {
   id: string;
   timestamp: string;
-  level: 'info' | 'warn' | 'error';
+  level: "info" | "warn" | "error";
   message: string;
   source: string;
 }

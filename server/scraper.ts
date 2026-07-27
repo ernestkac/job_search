@@ -1,5 +1,6 @@
 import { JobCategory, JobListing } from "../src/types";
 import { INITIAL_MOCK_JOBS } from "../src/data/mockJobs";
+import * as cheerio from "cheerio";
 
 // Simple in-memory cache to prevent frequent external site requests
 interface CacheEntry {
@@ -13,7 +14,11 @@ const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 /**
  * Creates a unique fingerprint string for duplicate detection
  */
-export function generateFingerprint(title: string, employer: string, closingDate: string): string {
+export function generateFingerprint(
+  title: string,
+  employer: string,
+  closingDate: string,
+): string {
   const clean = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, "");
   return `${clean(title)}-${clean(employer)}-${clean(closingDate)}`;
 }
@@ -35,34 +40,80 @@ export function isJobExpired(closingDateStr: string): boolean {
 /**
  * Categorizes job title and description into ICT Categories
  */
-export function classifyIctCategory(title: string, description: string): JobCategory {
+export function classifyIctCategory(
+  title: string,
+  description: string,
+): JobCategory {
   const text = `${title} ${description}`.toLowerCase();
 
-  if (text.includes("cyber") || text.includes("security") || text.includes("soc analyst") || text.includes("firewall")) {
+  if (
+    text.includes("cyber") ||
+    text.includes("security") ||
+    text.includes("soc analyst") ||
+    text.includes("firewall")
+  ) {
     return "Cybersecurity";
   }
-  if (text.includes("database") || text.includes("dba") || text.includes("sql") || text.includes("oracle")) {
+  if (
+    text.includes("database") ||
+    text.includes("dba") ||
+    text.includes("sql") ||
+    text.includes("oracle")
+  ) {
     return "Database Administrator";
   }
-  if (text.includes("developer") || text.includes("software") || text.includes("programmer") || text.includes("full stack") || text.includes("frontend") || text.includes("backend")) {
+  if (
+    text.includes("developer") ||
+    text.includes("software") ||
+    text.includes("programmer") ||
+    text.includes("full stack") ||
+    text.includes("frontend") ||
+    text.includes("backend")
+  ) {
     return "Software Developer";
   }
   if (text.includes("web") || text.includes("wordpress")) {
     return "Web Developer";
   }
-  if (text.includes("network") || text.includes("cisco") || text.includes("routing") || text.includes("switching") || text.includes("wan") || text.includes("lan")) {
+  if (
+    text.includes("network") ||
+    text.includes("cisco") ||
+    text.includes("routing") ||
+    text.includes("switching") ||
+    text.includes("wan") ||
+    text.includes("lan")
+  ) {
     return "Network Administrator";
   }
-  if (text.includes("systems administrator") || text.includes("sysadmin") || text.includes("windows server") || text.includes("linux admin") || text.includes("vmware")) {
+  if (
+    text.includes("systems administrator") ||
+    text.includes("sysadmin") ||
+    text.includes("windows server") ||
+    text.includes("linux admin") ||
+    text.includes("vmware")
+  ) {
     return "Systems Administrator";
   }
-  if (text.includes("systems analyst") || text.includes("business analyst") || text.includes("requirements")) {
+  if (
+    text.includes("systems analyst") ||
+    text.includes("business analyst") ||
+    text.includes("requirements")
+  ) {
     return "Systems Analyst";
   }
-  if (text.includes("project manager") || text.includes("pmp") || text.includes("scrum") || text.includes("agile")) {
+  if (
+    text.includes("project manager") ||
+    text.includes("pmp") ||
+    text.includes("scrum") ||
+    text.includes("agile")
+  ) {
     return "Technical Project Management";
   }
-  if (text.includes("technician") || text.includes("hardware") || text.includes("helpdesk")) {
+  if (
+    text.includes("technician") ||
+    text.includes("hardware") ||
+    text.includes("helpdesk")
+  ) {
     return "ICT Technician";
   }
   if (text.includes("support") || text.includes("desktop support")) {
@@ -84,9 +135,11 @@ export function classifyIctCategory(title: string, description: string): JobCate
 /**
  * Scrapes or retrieves ICT Job Listings from jobsearchmalawi.com and integrated sources
  */
-export async function fetchJobSearchMalawiJobs(forceRefresh = false): Promise<JobListing[]> {
+export async function fetchJobSearchMalawiJobs(
+  forceRefresh = false,
+): Promise<JobListing[]> {
   const now = Date.now();
-  if (!forceRefresh && jobCache && (now - jobCache.timestamp < CACHE_TTL_MS)) {
+  if (!forceRefresh && jobCache && now - jobCache.timestamp < CACHE_TTL_MS) {
     return jobCache.data;
   }
 
@@ -97,22 +150,87 @@ export async function fetchJobSearchMalawiJobs(forceRefresh = false): Promise<Jo
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    const response = await fetch("https://jobsearchmalawi.com/category/information-technology-ict/", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AIJobFinderMalawi/1.0 (Respectful ICT Job Ingestion Bot)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    console.log("Fetching live ICT job listings from jobsearchmalawi.com...");
+
+    const params = new URLSearchParams();
+
+    params.append("lang", "");
+    params.append("search_keywords", "");
+    params.append("search_location", "");
+
+    // Add category 41 for ICT jobs
+    params.append("search_categories[]", "41");
+
+    const jobTypes = [
+      "consultant",
+      "contract",
+      "freelance",
+      "full-time",
+      "internship",
+      "part-time",
+      "short-term",
+      "temporary",
+      "training",
+      "volunteer",
+      "",
+    ];
+
+    for (const type of jobTypes) {
+      params.append("filter_job_type[]", type);
+    }
+
+    params.append("per_page", "24");
+    params.append("orderby", "featured");
+    params.append("featured_first", "false");
+    params.append("order", "DESC");
+    params.append("page", "2");
+    params.append("remote_position", "");
+    params.append("show_pagination", "false");
+
+    const response = await fetch(
+      "https://jobsearchmalawi.com/jm-ajax/get_listings/",
+      {
+        method: "POST",
+
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/145.0.0.0 Safari/537.36",
+
+          Accept: "*/*",
+
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+
+          "X-Requested-With": "XMLHttpRequest",
+
+          Referer: "https://jobsearchmalawi.com/",
+        },
+
+        body: params.toString(),
       },
-      signal: controller.signal
-    });
+    );
 
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      const htmlText = await response.text();
+      const data = await response.json();
+
+      console.log("Found jobs:", data.found_jobs);
+      console.log("Pages:", data.max_num_pages);
+      console.log("HTML length:", data.html.length);
+
+      const htmlText = data.html;
       const parsedJobs = parseJobSearchMalawiHtml(htmlText);
-      
+      console.log(
+        htmlText.length,
+        "characters of HTML fetched from jobsearchmalawi.com, parsed into",
+        parsedJobs.length,
+        "job listings.",
+      );
+
       // De-duplicate using fingerprints
-      const existingFingerprints = new Set(scrapedJobs.map(j => j.fingerprint));
+      const existingFingerprints = new Set(
+        scrapedJobs.map((j) => j.fingerprint),
+      );
       for (const j of parsedJobs) {
         if (!existingFingerprints.has(j.fingerprint)) {
           existingFingerprints.add(j.fingerprint);
@@ -121,18 +239,21 @@ export async function fetchJobSearchMalawiJobs(forceRefresh = false): Promise<Jo
       }
     }
   } catch (err) {
-    console.warn("Live web scrape of jobsearchmalawi.com timed out or was blocked; utilizing verified live ICT job feed.", err);
+    console.warn(
+      "Live web scrape of jobsearchmalawi.com timed out or was blocked; utilizing verified live ICT job feed.",
+      err,
+    );
   }
 
   // Update expired status based on closing date vs current date
-  const processed = scrapedJobs.map(job => ({
+  const processed = scrapedJobs.map((job) => ({
     ...job,
-    isExpired: isJobExpired(job.closingDate)
+    isExpired: isJobExpired(job.closingDate),
   }));
 
   jobCache = {
     timestamp: now,
-    data: processed
+    data: processed,
   };
 
   return processed;
@@ -141,54 +262,54 @@ export async function fetchJobSearchMalawiJobs(forceRefresh = false): Promise<Jo
 /**
  * Parses raw HTML string from jobsearchmalawi.com into structured JobListing objects
  */
+
 function parseJobSearchMalawiHtml(html: string): JobListing[] {
+  const $ = cheerio.load(html);
   const jobs: JobListing[] = [];
-  
-  // Extract article elements or listing links using regex matches
-  const articleRegex = /<article[^>]*>([\s+S]*?)<\/article>/gi;
-  let match;
-  let index = 1;
 
-  while ((match = articleRegex.exec(html)) !== null) {
-    const articleContent = match[1];
-    
-    // Extract title & link
-    const titleMatch = /<h2[^>]*><a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/i.exec(articleContent) ||
-                       /<a[^>]*href="([^"]+)"[^>]*rel="bookmark"[^>]*>([\s\S]*?)<\/a>/i.exec(articleContent);
-    
-    if (titleMatch) {
-      const url = titleMatch[1];
-      const rawTitle = titleMatch[2].replace(/<[^>]+>/g, "").trim();
+  $("li.job_listing").each((index, element) => {
+    const job = $(element);
 
-      // Extract excerpt / company / date if present
-      const companyMatch = /Company:?\s*<[^>]+>([^<]+)/i.exec(articleContent) || /by\s+<[^>]+>([^<]+)/i.exec(articleContent);
-      const employer = companyMatch ? companyMatch[1].trim() : "Malawi Enterprise / NGO";
+    const url = job.find("a").first().attr("href")?.trim() || "";
 
-      const category = classifyIctCategory(rawTitle, articleContent);
-      const closingDate = "2026-08-30"; // Default future closing date if omitted
-      const fingerprint = generateFingerprint(rawTitle, employer, closingDate);
+    const title = job.find(".position h3").text().trim();
 
-      jobs.push({
-        id: `jsm-scraped-${Date.now()}-${index++}`,
-        title: rawTitle,
-        employer: employer,
-        location: "Lilongwe / Blantyre, Malawi",
-        closingDate: closingDate,
-        applicationMethod: "Apply via jobsearchmalawi.com link",
-        url: url,
-        rawDescription: articleContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1200),
-        requiredQualifications: ["Degree/Diploma in Computer Science, IT, or related field"],
-        requiredTechnicalSkills: ["ICT Systems", "Software & Hardware Troubleshooting", "Networking Basics"],
-        responsibilities: ["Execute technical responsibilities as outlined in the vacancy announcement."],
-        category: category,
-        postedDate: new Date().toISOString().split("T")[0],
-        workType: "On-site",
-        isExpired: false,
-        fingerprint: fingerprint,
-        sourceUrl: url
-      });
-    }
-  }
+    const employer = job.find(".company strong").text().trim();
+
+    const location = job.find(".location").text().trim();
+
+    const workType = job.find(".job-type").text().trim();
+
+    const postedDate =
+      job.find("time").attr("datetime") ||
+      new Date().toISOString().split("T")[0];
+
+    jobs.push({
+      id: `jsm-scraped-${Date.now()}-${index + 1}`,
+      title,
+      employer,
+      location,
+      url,
+      sourceUrl: url,
+      workType,
+      postedDate,
+
+      closingDate: "",
+      applicationMethod: "Apply via jobsearchmalawi.com link",
+
+      rawDescription: "",
+
+      requiredQualifications: [],
+      requiredTechnicalSkills: [],
+      responsibilities: [],
+
+      category: classifyIctCategory(title, ""),
+
+      isExpired: false,
+
+      fingerprint: generateFingerprint(title, employer, ""),
+    });
+  });
 
   return jobs;
 }
@@ -196,16 +317,19 @@ function parseJobSearchMalawiHtml(html: string): JobListing[] {
 /**
  * Ingests a direct job advertisement URL pasted by user
  */
-export async function scrapeSingleJobUrl(url: string): Promise<JobListing | null> {
+export async function scrapeSingleJobUrl(
+  url: string,
+): Promise<JobListing | null> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AIJobFinderMalawi/1.0"
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AIJobFinderMalawi/1.0",
       },
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
@@ -213,15 +337,23 @@ export async function scrapeSingleJobUrl(url: string): Promise<JobListing | null
     if (!response.ok) return null;
 
     const html = await response.text();
-    const cleanText = html.replace(/<script[\s\S]*?<\/script>/gi, "")
-                          .replace(/<style[\s\S]*?<\/style>/gi, "")
-                          .replace(/<[^>]+>/g, " ")
-                          .replace(/\s+/g, " ")
-                          .trim();
+    const cleanText = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
     // Extract title from <title> or <h1>
-    const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) || /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").split("-")[0].trim() : "ICT Vacancy";
+    const titleMatch =
+      /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) ||
+      /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+    const title = titleMatch
+      ? titleMatch[1]
+          .replace(/<[^>]+>/g, "")
+          .split("-")[0]
+          .trim()
+      : "ICT Vacancy";
 
     const category = classifyIctCategory(title, cleanText);
     const closingDate = "2026-08-31";
@@ -245,7 +377,7 @@ export async function scrapeSingleJobUrl(url: string): Promise<JobListing | null
       workType: "On-site",
       isExpired: false,
       fingerprint,
-      sourceUrl: url
+      sourceUrl: url,
     };
   } catch (err) {
     console.error("Error scraping single URL:", err);
