@@ -58,11 +58,11 @@ export async function fetchJobSearchMalawiJobs(
       params.append("filter_job_type[]", type);
     }
 
-    params.append("per_page", "24");
+    params.append("per_page", "12");
     params.append("orderby", "featured");
     params.append("featured_first", "false");
     params.append("order", "DESC");
-    params.append("page", "2");
+    params.append("page", "1");
     params.append("remote_position", "");
     params.append("show_pagination", "false");
 
@@ -98,7 +98,7 @@ export async function fetchJobSearchMalawiJobs(
       console.log("HTML length:", data.html.length);
 
       const htmlText = data.html;
-      const parsedJobs = parseJobSearchMalawiHtml(htmlText);
+      const parsedJobs = await parseJobSearchMalawiHtml(htmlText);
       console.log(
         htmlText.length,
         "characters of HTML fetched from jobsearchmalawi.com, parsed into",
