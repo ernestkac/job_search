@@ -1,11 +1,13 @@
 import "dotenv/config";
 import express from "express";
+import { initializeDatabase } from "./server/db";
 import {
-  initializeDatabase,
   getCandidateProfile,
   saveCandidateProfile,
   updateCandidateProfile,
-} from "./server/db";
+  initializeCandidateProfileTable,
+} from "./server/models/candidateProfile";
+import { getJobs, saveJob, initializeJobsTable } from "./server/models/jobs";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import {
@@ -25,6 +27,8 @@ let storedCandidateProfile: CandidateProfile;
 
 try {
   await initializeDatabase();
+  await initializeCandidateProfileTable();
+  await initializeJobsTable();
 } catch (error) {
   console.error("Failed to initialize database:", error);
   process.exit(1);
@@ -54,7 +58,8 @@ try {
   await saveCandidateProfile(storedCandidateProfile);
 }
 
-let storedJobListings: JobListing[] = [];
+let storedJobListings: JobListing[] = await getJobs();
+
 let storedApplications: TrackedApplication[] = [
   {
     id: "app-init-001",
@@ -96,8 +101,12 @@ async function startServer() {
   app.get("/api/jobs", async (req, res) => {
     try {
       const refresh = req.query.refresh === "true";
-      const fetchedJobs = await fetchJobSearchMalawiJobs(refresh);
-      storedJobListings = fetchedJobs;
+      if (refresh) {
+        const fetchedJobs = await fetchJobSearchMalawiJobs(refresh);
+        await Promise.all(fetchedJobs.map((job) => saveJob(job)));
+      }
+      storedJobListings = await getJobs();
+
       res.json({
         success: true,
         jobs: storedJobListings,
@@ -137,7 +146,8 @@ async function startServer() {
       if (existsIndex >= 0) {
         storedJobListings[existsIndex] = scrapedJob;
       } else {
-        storedJobListings.unshift(scrapedJob);
+        await saveJob(scrapedJob);
+        storedJobListings.push(scrapedJob);
       }
 
       res.json({
