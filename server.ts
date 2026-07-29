@@ -5,7 +5,6 @@ import {
   getCandidateProfile,
   saveCandidateProfile,
   updateCandidateProfile,
-  deleteCandidateProfile,
 } from "./server/db";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -32,9 +31,9 @@ try {
 }
 
 try {
-  const existingProfile = (await getCandidateProfile(profileId)) as
-    | CandidateProfile
-    | null;
+  const existingProfile = (await getCandidateProfile(
+    profileId,
+  )) as CandidateProfile | null;
 
   if (existingProfile && Object.keys(existingProfile).length > 0) {
     storedCandidateProfile = existingProfile;
@@ -55,7 +54,7 @@ try {
   await saveCandidateProfile(storedCandidateProfile);
 }
 
-let storedJobListings: JobListing[] = [...INITIAL_MOCK_JOBS];
+let storedJobListings: JobListing[] = [];
 let storedApplications: TrackedApplication[] = [
   {
     id: "app-init-001",

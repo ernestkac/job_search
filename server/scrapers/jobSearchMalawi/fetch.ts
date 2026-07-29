@@ -127,7 +127,7 @@ export async function fetchJobSearchMalawiJobs(
   // Update expired status based on closing date vs current date
   const processed = scrapedJobs.map((job) => ({
     ...job,
-    isExpired: isJobExpired(job.closingDate),
+    //isExpired: isJobExpired(job.closingDate),
   }));
 
   jobCache = {
