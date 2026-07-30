@@ -16,6 +16,7 @@ import {
 } from "../models/applications";
 
 let storedJobListings: JobListing[] = await getJobs();
+console.log(storedJobListings);
 
 export const listJobs = async (req: Request, res: Response) => {
   try {

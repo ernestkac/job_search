@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import crypto from "crypto";
-import { JobListing } from "../../../src/types";
+import { JobListing } from "../../../../src/types";
 import { classifyIctCategory } from "../ictCategory";
 
 let logged = false;

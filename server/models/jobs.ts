@@ -126,11 +126,10 @@ export async function getJobs(): Promise<JobListing[]> {
   return rows.map((job: any) => ({
     ...job,
     requiredQualifications: job.required_qualifications,
-
     requiredTechnicalSkills: job.required_technical_skills,
-
-    responsibilities: job.responsibilities,
-
+    applicationMethod: job.application_method,
+    rawDescription: job.raw_description,
+    closingDate: job.closing_date,
     isExpired: Boolean(job.is_expired),
   }));
 }
