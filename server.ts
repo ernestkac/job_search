@@ -8,6 +8,13 @@ import {
   initializeCandidateProfileTable,
 } from "./server/models/candidateProfile";
 import { getJobs, saveJob, initializeJobsTable } from "./server/models/jobs";
+import {
+  getTrackedApplications,
+  trackNewApplication,
+  updateTrackedApplication,
+  initializeTrackedApplicationsTable,
+  deleteTrackedApplication,
+} from "./server/models/applications";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import {
@@ -21,6 +28,7 @@ import {
   parseCvWithGemini,
 } from "./server/gemini";
 import { fetchJobSearchMalawiJobs, scrapeSingleJobUrl } from "./server/scraper";
+import { a } from "motion/react-client";
 
 let profileId = 1;
 let storedCandidateProfile: CandidateProfile;
@@ -29,6 +37,7 @@ try {
   await initializeDatabase();
   await initializeCandidateProfileTable();
   await initializeJobsTable();
+  await initializeTrackedApplicationsTable();
 } catch (error) {
   console.error("Failed to initialize database:", error);
   process.exit(1);
@@ -60,22 +69,7 @@ try {
 
 let storedJobListings: JobListing[] = await getJobs();
 
-let storedApplications: TrackedApplication[] = [
-  {
-    id: "app-init-001",
-    jobId: "job-mw-001",
-    jobTitle: "Senior ICT Infrastructure & Systems Administrator",
-    employer: "National Bank of Malawi Plc",
-    location: "Blantyre, Malawi",
-    status: "Interested",
-    applicationDate: "2026-07-22",
-    closingDate: "2026-08-15",
-    applicationContact: "vacancies@natbank.mw",
-    notes:
-      "Requires MCSA or RHCSA certification. Verified background alignment.",
-    updatedAt: new Date().toISOString(),
-  },
-];
+let storedApplications: TrackedApplication[] = await getTrackedApplications();
 
 async function startServer() {
   const app = express();
@@ -286,6 +280,13 @@ async function startServer() {
             ? "Letter Generated"
             : appRecord.status;
         appRecord.updatedAt = new Date().toISOString();
+
+        await updateTrackedApplication(appRecord.id, {
+          generatedLetter: generatedLetter,
+          status: appRecord.status,
+        }).catch((err) => {
+          console.error("Error updating tracked application:", err);
+        });
       } else {
         appRecord = {
           id: `app-${Date.now()}`,
@@ -301,6 +302,9 @@ async function startServer() {
           updatedAt: new Date().toISOString(),
         };
         storedApplications.push(appRecord);
+        await trackNewApplication(appRecord).catch((err) => {
+          console.error("Error saving tracked application to database:", err);
+        });
       }
 
       res.json({
@@ -320,6 +324,7 @@ async function startServer() {
 
   // GET /api/applications - List tracked job applications
   app.get("/api/applications", (_req, res) => {
+    console.log("Fetching tracked applications...");
     res.json({
       success: true,
       applications: storedApplications,
@@ -328,7 +333,7 @@ async function startServer() {
   });
 
   // POST /api/applications - Create or update tracked application
-  app.post("/api/applications", (req, res) => {
+  app.post("/api/applications", async (req, res) => {
     try {
       const appData: TrackedApplication = req.body;
       if (!appData.jobId) {
@@ -336,7 +341,7 @@ async function startServer() {
           .status(400)
           .json({ success: false, error: "Job ID is required." });
       }
-
+      console.log(`Tracking application for Job ID: ${appData.jobId}`);
       const index = storedApplications.findIndex(
         (a) => a.id === appData.id || a.jobId === appData.jobId,
       );
@@ -346,11 +351,24 @@ async function startServer() {
           ...appData,
           updatedAt: new Date().toISOString(),
         };
+        console.log(
+          `Updating tracked application with ID: ${storedApplications[index].id}`,
+        );
+        await updateTrackedApplication(storedApplications[index].id, {
+          ...appData,
+        }).catch((err) => {
+          console.error("Error updating tracked application in database:", err);
+        });
       } else {
         storedApplications.push({
           ...appData,
           id: appData.id || `app-${Date.now()}`,
           updatedAt: new Date().toISOString(),
+        });
+        await trackNewApplication(
+          storedApplications[storedApplications.length - 1],
+        ).catch((err) => {
+          console.error("Error saving tracked application to database:", err);
         });
       }
 
@@ -365,9 +383,13 @@ async function startServer() {
   });
 
   // DELETE /api/applications/:id - Remove tracked application
-  app.delete("/api/applications/:id", (req, res) => {
+  app.delete("/api/applications/:id", async (req, res) => {
     const { id } = req.params;
+    console.log(`Removing tracked application with ID: ${id}`);
     storedApplications = storedApplications.filter((a) => a.id !== id);
+    await deleteTrackedApplication(id).catch((err) => {
+      console.error("Error deleting tracked application from database:", err);
+    });
     res.json({
       success: true,
       applications: storedApplications,
