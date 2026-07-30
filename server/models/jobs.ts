@@ -3,6 +3,20 @@
 import db from "../db";
 import { JobListing } from "../../src/types";
 
+interface UpdateJob {
+  title?: string;
+  employer?: string;
+  location?: string;
+  closingDate?: string; // YYYY-MM-DD
+  applicationMethod?: string;
+  rawDescription?: string;
+  requiredQualifications?: string[];
+  requiredTechnicalSkills?: string[];
+  responsibilities?: string[];
+  workType?: string; // e.g., Full-time, Part-time, Contract
+  isExpired?: boolean;
+}
+
 export async function initializeJobsTable() {
   await db.query(`
         CREATE TABLE IF NOT EXISTS jobs (
@@ -129,4 +143,61 @@ export async function getActiveJobs() {
     `);
 
   return rows;
+}
+export async function updateJob(
+  jobId: string,
+  updates: UpdateJob,
+): Promise<void> {
+  try {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.title !== undefined) {
+      fields.push("title = ?");
+      values.push(updates.title);
+    }
+    if (updates.employer !== undefined) {
+      fields.push("employer = ?");
+      values.push(updates.employer);
+    }
+    if (updates.location !== undefined) {
+      fields.push("location = ?");
+      values.push(updates.location);
+    }
+    if (updates.closingDate !== undefined) {
+      fields.push("closing_date = ?");
+      values.push(updates.closingDate);
+    }
+    if (updates.applicationMethod !== undefined) {
+      fields.push("application_method = ?");
+      values.push(updates.applicationMethod);
+    }
+    if (updates.rawDescription !== undefined) {
+      fields.push("raw_description = ?");
+      values.push(updates.rawDescription);
+    }
+    if (updates.requiredQualifications !== undefined) {
+      fields.push("required_qualifications = ?");
+      values.push(JSON.stringify(updates.requiredQualifications));
+    }
+    if (updates.requiredTechnicalSkills !== undefined) {
+      fields.push("required_technical_skills = ?");
+      values.push(JSON.stringify(updates.requiredTechnicalSkills));
+    }
+    if (updates.responsibilities !== undefined) {
+      fields.push("responsibilities = ?");
+      values.push(JSON.stringify(updates.responsibilities));
+    }
+    if (updates.workType !== undefined) {
+      fields.push("work_type = ?");
+      values.push(updates.workType);
+    }
+    if (updates.isExpired !== undefined) {
+      fields.push("is_expired = ?");
+      values.push(updates.isExpired);
+    }
+  } catch (error) {
+    console.error("Error updating job:", error);
+    throw error;
+  }
 }

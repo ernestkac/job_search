@@ -7,7 +7,12 @@ import {
   updateCandidateProfile,
   initializeCandidateProfileTable,
 } from "./server/models/candidateProfile";
-import { getJobs, saveJob, initializeJobsTable } from "./server/models/jobs";
+import {
+  getJobs,
+  saveJob,
+  updateJob,
+  initializeJobsTable,
+} from "./server/models/jobs";
 import {
   getTrackedApplications,
   trackNewApplication,
@@ -139,6 +144,7 @@ async function startServer() {
       );
       if (existsIndex >= 0) {
         storedJobListings[existsIndex] = scrapedJob;
+        await updateJob(scrapedJob.id, scrapedJob);
       } else {
         await saveJob(scrapedJob);
         storedJobListings.push(scrapedJob);
