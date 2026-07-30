@@ -1,5 +1,5 @@
-import { JobListing } from "../../../src/types";
-import { INITIAL_MOCK_JOBS } from "../../../src/data/mockJobs";
+import { JobListing } from "../../../../src/types";
+import { INITIAL_MOCK_JOBS } from "../../../../src/data/mockJobs";
 import { parseJobSearchMalawiHtml } from "../jobSearchMalawi/parser";
 
 // Simple in-memory cache to prevent frequent external site requests

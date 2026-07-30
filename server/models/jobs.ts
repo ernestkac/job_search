@@ -1,6 +1,6 @@
 // models/job.ts
 
-import db from "../db";
+import db from "../config/db";
 import { JobListing } from "../../src/types";
 
 interface UpdateJob {

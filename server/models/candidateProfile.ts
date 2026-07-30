@@ -1,5 +1,5 @@
 import { ResultSetHeader, RowDataPacket } from "mysql2";
-import db from "../../server/db";
+import db from "../../server/config/db";
 
 interface CandidateProfileRow extends RowDataPacket {
   id: number;

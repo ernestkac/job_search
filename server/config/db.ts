@@ -1,5 +1,7 @@
 import mysql from "mysql2/promise";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { initializeTrackedApplicationsTable } from "../models/applications";
+import { initializeCandidateProfileTable } from "../models/candidateProfile";
+import { initializeJobsTable } from "../models/jobs";
 
 const dbConfig = {
   host: process.env.DB_HOST || "localhost",
@@ -25,6 +27,10 @@ export async function initializeDatabase() {
   await connection.query(`
     CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\`
   `);
+
+  await initializeCandidateProfileTable();
+  await initializeJobsTable();
+  await initializeTrackedApplicationsTable();
 
   await connection.end();
 

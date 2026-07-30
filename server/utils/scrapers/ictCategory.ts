@@ -1,4 +1,4 @@
-import { JobCategory } from "../../src/types";
+import { JobCategory } from "../../../src/types";
 /**
  * Categorizes job title and description into ICT Categories
  */

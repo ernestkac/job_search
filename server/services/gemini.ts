@@ -1,5 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { CandidateProfile, JobListing, JobMatchAnalysis } from "../src/types";
+import {
+  CandidateProfile,
+  JobListing,
+  JobMatchAnalysis,
+} from "../../src/types";
 
 // Initialize Gemini Client with User-Agent header for AI Studio
 const getGeminiClient = () => {

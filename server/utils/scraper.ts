@@ -1,4 +1,4 @@
-import { JobListing } from "../src/types";
+import { JobListing } from "../../src/types";
 import { classifyIctCategory } from "./scrapers/ictCategory";
 import { generateFingerprint } from "./scrapers/fingerPrintGenerator";
 
