@@ -3,8 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
-import { CandidateProfile, JobFilterState, JobListing, JobMatchAnalysis, TrackedApplication } from './types';
+import React, { useEffect, useState } from "react";
+import {
+  CandidateProfile,
+  JobFilterState,
+  JobListing,
+  JobMatchAnalysis,
+  TrackedApplication,
+} from "./types";
 import {
   apiAnalyzeMatch,
   apiDeleteApplication,
@@ -18,26 +24,36 @@ import {
   apiScrapeSingleUrl,
   computeInstantMatch,
   filterJobListings,
-} from './lib/api';
-import { Navbar } from './components/Navbar';
-import { DashboardView } from './components/DashboardView';
-import { JobExplorerView } from './components/JobExplorerView';
-import { JobDetailModal } from './components/JobDetailModal';
-import { ProfileView } from './components/ProfileView';
-import { ApplicationTrackerView } from './components/ApplicationTrackerView';
-import { CoverLetterModal } from './components/CoverLetterModal';
-import { ArchitectureModal } from './components/ArchitectureModal';
-import { INITIAL_CANDIDATE_PROFILE, INITIAL_MOCK_JOBS } from './data/mockJobs';
-import { RefreshCw, PlusCircle, Globe, X } from 'lucide-react';
+} from "./lib/api";
+import { logout } from "./lib/googleauth";
+import { Navbar } from "./components/Navbar";
+import { DashboardView } from "./components/DashboardView";
+import { LoginScreen } from "./components/loginScreen";
+import { JobExplorerView } from "./components/JobExplorerView";
+import { JobDetailModal } from "./components/JobDetailModal";
+import { ProfileView } from "./components/ProfileView";
+import { ApplicationTrackerView } from "./components/ApplicationTrackerView";
+import { CoverLetterModal } from "./components/CoverLetterModal";
+import { ArchitectureModal } from "./components/ArchitectureModal";
+import { INITIAL_CANDIDATE_PROFILE, INITIAL_MOCK_JOBS } from "./data/mockJobs";
+import { RefreshCw, PlusCircle, Globe, X } from "lucide-react";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'jobs' | 'profile' | 'applications'>('dashboard');
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "jobs" | "profile" | "applications"
+  >("dashboard");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Application State
-  const [profile, setProfile] = useState<CandidateProfile>(INITIAL_CANDIDATE_PROFILE);
-  const [jobs, setJobs] = useState<JobListing[]>(INITIAL_MOCK_JOBS);
+  const [profile, setProfile] = useState<CandidateProfile>(
+    INITIAL_CANDIDATE_PROFILE,
+  );
+  const [jobs, setJobs] = useState<JobListing[]>([]);
   const [applications, setApplications] = useState<TrackedApplication[]>([]);
-  const [matchesMap, setMatchesMap] = useState<Record<string, JobMatchAnalysis>>({});
+  const [matchesMap, setMatchesMap] = useState<
+    Record<string, JobMatchAnalysis>
+  >({});
 
   // Loading States
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
@@ -48,27 +64,65 @@ export default function App() {
 
   // Modals State
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
-  const [activeLetterData, setActiveLetterData] = useState<{ letter: string; jobTitle: string; employer: string; jobId: string } | null>(null);
+  const [activeLetterData, setActiveLetterData] = useState<{
+    letter: string;
+    jobTitle: string;
+    employer: string;
+    jobId: string;
+  } | null>(null);
   const [isScrapeModalOpen, setIsScrapeModalOpen] = useState(false);
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
-  const [ingestInputUrl, setIngestInputUrl] = useState('');
-  const [ingestMessage, setIngestMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [ingestInputUrl, setIngestInputUrl] = useState("");
+  const [ingestMessage, setIngestMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Filter State
   const [filterState, setFilterState] = useState<JobFilterState>({
-    searchQuery: '',
-    category: 'All',
+    searchQuery: "",
+    category: "All",
     minScore: 0,
-    location: 'All',
-    workType: 'All',
+    location: "All",
+    workType: "All",
     hideExpired: true,
-    statusFilter: 'All',
+    statusFilter: "All",
   });
+
+  const handleSignOut = () => {
+    logout();
+    setIsAuthenticated(false);
+  };
+
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      try {
+        await apiFetchProfile();
+        setIsAuthenticated(true);
+      } catch (err) {
+        localStorage.removeItem("token");
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    verifyAuth();
+  }, []);
 
   // Initial Load
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (isAuthenticated) {
+      loadInitialData();
+    }
+  }, [isAuthenticated]);
 
   const loadInitialData = async () => {
     setIsLoadingJobs(true);
@@ -94,7 +148,7 @@ export default function App() {
       const initialJobs = fetchedJobs || INITIAL_MOCK_JOBS;
       runBatchMatchAnalysis(initialJobs, initialProfile);
     } catch (err) {
-      console.warn('Initialization error, using fallback state:', err);
+      console.warn("Initialization error, using fallback state:", err);
     } finally {
       setIsLoadingJobs(false);
     }
@@ -109,18 +163,21 @@ export default function App() {
         runBatchMatchAnalysis(freshJobs, profile);
       }
     } catch (err) {
-      console.error('Error refreshing jobs:', err);
+      console.error("Error refreshing jobs:", err);
     } finally {
       setIsRefreshingJobs(false);
     }
   };
 
-  const runBatchMatchAnalysis = (jobList: JobListing[], targetProfile: CandidateProfile = profile) => {
+  const runBatchMatchAnalysis = (
+    jobList: JobListing[],
+    targetProfile: CandidateProfile = profile,
+  ) => {
     const newMatches: Record<string, JobMatchAnalysis> = {};
     for (const job of jobList) {
       newMatches[job.id] = computeInstantMatch(targetProfile, job);
     }
-    setMatchesMap(prev => ({ ...newMatches, ...prev }));
+    setMatchesMap((prev) => ({ ...newMatches, ...prev }));
   };
 
   // Action: Select job for detailed view
@@ -129,9 +186,9 @@ export default function App() {
     // Request deep AI match analysis for selected job
     try {
       const matchResult = await apiAnalyzeMatch(job.id, job);
-      setMatchesMap(prev => ({ ...prev, [job.id]: matchResult }));
+      setMatchesMap((prev) => ({ ...prev, [job.id]: matchResult }));
     } catch (err) {
-      console.warn('AI job match note:', err);
+      console.warn("AI job match note:", err);
     }
   };
 
@@ -140,12 +197,14 @@ export default function App() {
     setIsGeneratingLetter(true);
     try {
       const result = await apiGenerateLetter(job.id, customNote, job);
-      
+
       // Update applications state
-      setApplications(prev => {
-        const exists = prev.find(a => a.jobId === job.id);
+      setApplications((prev) => {
+        const exists = prev.find((a) => a.jobId === job.id);
         if (exists) {
-          return prev.map(a => a.jobId === job.id ? result.applicationRecord : a);
+          return prev.map((a) =>
+            a.jobId === job.id ? result.applicationRecord : a,
+          );
         }
         return [result.applicationRecord, ...prev];
       });
@@ -165,7 +224,7 @@ export default function App() {
 
   // Action: Save / Track job
   const handleTrackJob = async (job: JobListing) => {
-    const existing = applications.find(a => a.jobId === job.id);
+    const existing = applications.find((a) => a.jobId === job.id);
     if (existing) return;
 
     const newApp: TrackedApplication = {
@@ -174,11 +233,11 @@ export default function App() {
       jobTitle: job.title,
       employer: job.employer,
       location: job.location,
-      status: 'Interested',
-      applicationDate: new Date().toISOString().split('T')[0],
+      status: "Interested",
+      applicationDate: new Date().toISOString().split("T")[0],
       closingDate: job.closingDate,
       applicationContact: job.applicationMethod,
-      notes: 'Saved for review',
+      notes: "Saved for review",
       updatedAt: new Date().toISOString(),
     };
 
@@ -186,8 +245,8 @@ export default function App() {
       const updatedList = await apiSaveApplication(newApp);
       setApplications(updatedList);
     } catch (err) {
-      console.error('Error saving application:', err);
-      setApplications(prev => [newApp, ...prev]);
+      console.error("Error saving application:", err);
+      setApplications((prev) => [newApp, ...prev]);
     }
   };
 
@@ -203,13 +262,19 @@ export default function App() {
   };
 
   // Action: Parse CV file or text
-  const handleParseCv = async (payload: { rawText?: string; fileBase64?: string; mimeType?: string }) => {
+  const handleParseCv = async (payload: {
+    rawText?: string;
+    fileBase64?: string;
+    mimeType?: string;
+  }) => {
     setIsParsingCv(true);
     try {
       const updatedProfile = await apiParseCv(payload);
       setProfile(updatedProfile);
       runBatchMatchAnalysis(jobs, updatedProfile);
-      alert('CV analyzed! Profile updated with your skills, experience, and education.');
+      alert(
+        "CV analyzed! Profile updated with your skills, experience, and education.",
+      );
     } catch (err: any) {
       alert(`CV Analysis failed: ${err.message}`);
     } finally {
@@ -222,8 +287,10 @@ export default function App() {
     setIngestMessage(null);
     try {
       const scraped = await apiScrapeSingleUrl(urlToIngest);
-      setJobs(prev => {
-        const index = prev.findIndex(j => j.fingerprint === scraped.fingerprint || j.url === scraped.url);
+      setJobs((prev) => {
+        const index = prev.findIndex(
+          (j) => j.fingerprint === scraped.fingerprint || j.url === scraped.url,
+        );
         if (index >= 0) {
           const updated = [...prev];
           updated[index] = scraped;
@@ -232,16 +299,39 @@ export default function App() {
         return [scraped, ...prev];
       });
 
-      setIngestMessage({ type: 'success', text: `Successfully ingested "${scraped.title}" from ${scraped.employer}.` });
+      setIngestMessage({
+        type: "success",
+        text: `Successfully ingested "${scraped.title}" from ${scraped.employer}.`,
+      });
       setIsScrapeModalOpen(false);
       handleSelectJob(scraped);
     } catch (err: any) {
-      setIngestMessage({ type: 'error', text: err.message || 'Failed to ingest URL.' });
+      setIngestMessage({
+        type: "error",
+        text: err.message || "Failed to ingest URL.",
+      });
     }
   };
 
   // Filtered jobs list
   const filteredJobs = filterJobListings(jobs, filterState, matchesMap);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="flex flex-col items-center space-y-3">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm font-semibold text-slate-600">
+            Verifying authentication...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col selection:bg-blue-500 selection:text-white">
@@ -254,6 +344,8 @@ export default function App() {
         isRefreshingJobs={isRefreshingJobs}
         onRefreshJobs={handleRefreshJobs}
         candidateName={profile.fullName}
+        candidateEmail={profile.email}
+        onSignOut={handleSignOut}
       />
 
       {/* Main App Container */}
@@ -261,11 +353,13 @@ export default function App() {
         {isLoadingJobs ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-            <p className="text-sm font-semibold text-slate-600">Loading ICT opportunities from jobsearchmalawi.com...</p>
+            <p className="text-sm font-semibold text-slate-600">
+              Loading ICT opportunities from jobsearchmalawi.com...
+            </p>
           </div>
         ) : (
           <>
-            {activeTab === 'dashboard' && (
+            {activeTab === "dashboard" && (
               <DashboardView
                 profile={profile}
                 jobs={jobs}
@@ -277,7 +371,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'jobs' && (
+            {activeTab === "jobs" && (
               <JobExplorerView
                 jobs={filteredJobs}
                 matchesMap={matchesMap}
@@ -290,7 +384,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <ProfileView
                 profile={profile}
                 onSaveProfile={handleSaveProfile}
@@ -299,20 +393,27 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'applications' && (
+            {activeTab === "applications" && (
               <ApplicationTrackerView
                 applications={applications}
                 onUpdateStatus={async (id, status) => {
-                  const target = applications.find(a => a.id === id);
+                  const target = applications.find((a) => a.id === id);
                   if (target) {
-                    const updated = await apiSaveApplication({ ...target, status });
+                    const updated = await apiSaveApplication({
+                      ...target,
+                      status,
+                    });
                     setApplications(updated);
                   }
                 }}
                 onUpdateNotes={async (id, notes, reminderDate) => {
-                  const target = applications.find(a => a.id === id);
+                  const target = applications.find((a) => a.id === id);
                   if (target) {
-                    const updated = await apiSaveApplication({ ...target, notes, followUpReminderDate: reminderDate });
+                    const updated = await apiSaveApplication({
+                      ...target,
+                      notes,
+                      followUpReminderDate: reminderDate,
+                    });
                     setApplications(updated);
                   }
                 }}
@@ -347,18 +448,22 @@ export default function App() {
           handleGenerateLetter(j);
         }}
         onTrackJob={handleTrackJob}
-        isTracked={selectedJob ? applications.some(a => a.jobId === selectedJob.id) : false}
+        isTracked={
+          selectedJob
+            ? applications.some((a) => a.jobId === selectedJob.id)
+            : false
+        }
       />
 
       <CoverLetterModal
         isOpen={Boolean(activeLetterData)}
-        letterText={activeLetterData?.letter || ''}
-        jobTitle={activeLetterData?.jobTitle || ''}
-        employer={activeLetterData?.employer || ''}
+        letterText={activeLetterData?.letter || ""}
+        jobTitle={activeLetterData?.jobTitle || ""}
+        employer={activeLetterData?.employer || ""}
         onClose={() => setActiveLetterData(null)}
         isRegenerating={isGeneratingLetter}
         onRegenerateLetter={(note) => {
-          const target = jobs.find(j => j.id === activeLetterData?.jobId);
+          const target = jobs.find((j) => j.id === activeLetterData?.jobId);
           if (target) {
             handleGenerateLetter(target, note);
           }
@@ -379,13 +484,18 @@ export default function App() {
                 <Globe className="h-5 w-5 text-blue-600" />
                 <span>Ingest Direct Job Search Malawi Link</span>
               </div>
-              <button onClick={() => setIsScrapeModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                onClick={() => setIsScrapeModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <p className="text-xs text-slate-600">
-              Paste the URL of any specific job listing from jobsearchmalawi.com to extract details, calculate candidate match, and generate an application letter.
+              Paste the URL of any specific job listing from jobsearchmalawi.com
+              to extract details, calculate candidate match, and generate an
+              application letter.
             </p>
 
             <form
@@ -407,7 +517,9 @@ export default function App() {
               />
 
               {ingestMessage && (
-                <div className={`p-2.5 rounded-lg text-xs font-semibold ${ingestMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+                <div
+                  className={`p-2.5 rounded-lg text-xs font-semibold ${ingestMessage.type === "success" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}
+                >
                   {ingestMessage.text}
                 </div>
               )}
@@ -435,9 +547,15 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 AI Job Finder &amp; Application Assistant • Monitoring jobsearchmalawi.com</p>
+          <p>
+            © 2026 AI Job Finder &amp; Application Assistant • Monitoring
+            jobsearchmalawi.com
+          </p>
           <div className="flex items-center space-x-4">
-            <button onClick={() => setIsArchModalOpen(true)} className="hover:text-white transition">
+            <button
+              onClick={() => setIsArchModalOpen(true)}
+              className="hover:text-white transition"
+            >
               System Proposal Specs
             </button>
             <span>•</span>

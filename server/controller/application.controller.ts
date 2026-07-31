@@ -8,11 +8,10 @@ import {
 import { TrackedApplication } from "../../src/types";
 import { Request, Response } from "express";
 
-export let storedApplications: TrackedApplication[] =
-  await getTrackedApplications();
-
 export const getApplications = async (req: Request, res: Response) => {
   console.log("Fetching tracked applications...");
+  const googleId = (req as any).user!.googleId;
+  let storedApplications = await getTrackedApplications(googleId);
   res.json({
     success: true,
     applications: storedApplications,
@@ -23,6 +22,8 @@ export const getApplications = async (req: Request, res: Response) => {
 export const trackApplication = async (req: Request, res: Response) => {
   try {
     const appData: TrackedApplication = req.body;
+    const googleId = (req as any).user!.googleId;
+    let storedApplications = await getTrackedApplications(googleId);
     if (!appData.jobId) {
       return res
         .status(400)
@@ -41,7 +42,7 @@ export const trackApplication = async (req: Request, res: Response) => {
       console.log(
         `Updating tracked application with ID: ${storedApplications[index].id}`,
       );
-      await updateTrackedApplication(storedApplications[index].id, {
+      await updateTrackedApplication(googleId, storedApplications[index].id, {
         ...appData,
       }).catch((err) => {
         console.error("Error updating tracked application in database:", err);
@@ -53,6 +54,7 @@ export const trackApplication = async (req: Request, res: Response) => {
         updatedAt: new Date().toISOString(),
       });
       await trackNewApplication(
+        googleId,
         storedApplications[storedApplications.length - 1],
       ).catch((err) => {
         console.error("Error saving tracked application to database:", err);
@@ -72,8 +74,10 @@ export const trackApplication = async (req: Request, res: Response) => {
 export const deleteApplication = async (req: Request, res: Response) => {
   const { id } = req.params;
   console.log(`Removing tracked application with ID: ${id}`);
+  const googleId = (req as any).user!.googleId;
+  let storedApplications = await getTrackedApplications(googleId);
   storedApplications = storedApplications.filter((a) => a.id !== id);
-  await deleteTrackedApplication(id).catch((err) => {
+  await deleteTrackedApplication(googleId, id).catch((err) => {
     console.error("Error deleting tracked application from database:", err);
   });
   res.json({

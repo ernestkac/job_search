@@ -7,13 +7,13 @@ import {
 
 const router = Router();
 
-// GET /api/profile - Fetch candidate profile
+// GET /api/candidates - Fetch candidate profile
 router.get("/", getProfile);
 
-// POST /api/profile - Save/update candidate profile
+// POST /api/candidates - Save/update candidate profile
 router.post("/", updateProfile);
 
-// POST /api/profile/parse-cv - Parse candidate CV and update profile
+// POST /api/candidates/parse-cv - Parse candidate CV and update profile
 router.post("/parse-cv", parseCandidateCv);
 
 export default router;

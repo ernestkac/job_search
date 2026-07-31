@@ -1,22 +1,22 @@
 import { Request, Response } from "express";
 import { getJobs, saveJob, updateJob } from "../models/jobs";
-import { storedApplications } from "./application.controller";
+import { getTrackedApplications } from "../models/applications";
 import {
   analyzeJobMatchWithGemini,
   generateCoverLetterWithGemini,
 } from "../services/gemini";
 
-import { JobListing } from "../../src/types";
+import { JobListing, CandidateProfile } from "../../src/types";
 
 import { fetchJobSearchMalawiJobs, scrapeSingleJobUrl } from "../utils/scraper";
-import { storedCandidateProfile } from "./candidate.controller";
+import { getCandidateProfile } from "../models/candidateProfile";
 import {
   trackNewApplication,
   updateTrackedApplication,
 } from "../models/applications";
+import { candidateProfile } from "./candidate.controller";
 
 let storedJobListings: JobListing[] = await getJobs();
-console.log(storedJobListings);
 
 export const listJobs = async (req: Request, res: Response) => {
   try {
@@ -87,6 +87,7 @@ export const scrapeJobUrl = async (req: Request, res: Response) => {
 export const matchJobs = async (req: Request, res: Response) => {
   try {
     const { jobId, customJob } = req.body;
+    const googleId = (req as any).user!.googleId;
     const targetJob: JobListing | undefined =
       customJob || storedJobListings.find((j) => j.id === jobId);
 
@@ -96,8 +97,12 @@ export const matchJobs = async (req: Request, res: Response) => {
         .json({ success: false, error: "Job listing not found." });
     }
 
+    let candidateProfile = (await getCandidateProfile(
+      googleId,
+    )) as CandidateProfile;
+
     const matchAnalysis = await analyzeJobMatchWithGemini(
-      storedCandidateProfile,
+      candidateProfile,
       targetJob,
     );
     res.json({ success: true, match: matchAnalysis });
@@ -113,6 +118,7 @@ export const matchJobs = async (req: Request, res: Response) => {
 export const generateCoverLetter = async (req: Request, res: Response) => {
   try {
     const { jobId, customNote, customJob } = req.body;
+    const googleId = (req as any).user!.googleId;
     const targetJob: JobListing | undefined =
       customJob || storedJobListings.find((j) => j.id === jobId);
 
@@ -123,11 +129,12 @@ export const generateCoverLetter = async (req: Request, res: Response) => {
     }
 
     const generatedLetter = await generateCoverLetterWithGemini(
-      storedCandidateProfile,
+      (await getCandidateProfile(googleId)) as CandidateProfile,
       targetJob,
       customNote,
     );
 
+    let storedApplications = await getTrackedApplications(googleId);
     // Automatically record/update tracked application state
     let appRecord = storedApplications.find((a) => a.jobId === targetJob.id);
     if (appRecord) {
@@ -138,7 +145,7 @@ export const generateCoverLetter = async (req: Request, res: Response) => {
           : appRecord.status;
       appRecord.updatedAt = new Date().toISOString();
 
-      await updateTrackedApplication(appRecord.id, {
+      await updateTrackedApplication(googleId, appRecord.id, {
         generatedLetter: generatedLetter,
         status: appRecord.status,
       }).catch((err) => {
@@ -159,7 +166,7 @@ export const generateCoverLetter = async (req: Request, res: Response) => {
         updatedAt: new Date().toISOString(),
       };
       storedApplications.push(appRecord);
-      await trackNewApplication(appRecord).catch((err) => {
+      await trackNewApplication(googleId, appRecord).catch((err) => {
         console.error("Error saving tracked application to database:", err);
       });
     }

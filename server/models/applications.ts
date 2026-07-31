@@ -12,6 +12,7 @@ export async function initializeTrackedApplicationsTable() {
   await db.query(`
         CREATE TABLE IF NOT EXISTS tracked_applications (
           id VARCHAR(36) PRIMARY KEY,
+          google_id VARCHAR(64) UNIQUE,
           job_id VARCHAR(36) NOT NULL,
           status VARCHAR(50) NOT NULL,
           application_date DATE NULL,
@@ -26,12 +27,14 @@ export async function initializeTrackedApplicationsTable() {
 }
 
 export async function trackNewApplication(
+  googleId: String,
   application: TrackedApplication,
 ): Promise<void> {
   try {
     await db.query(
       `
       INSERT INTO tracked_applications (
+        google_id,
         id,
         job_id,
         status,
@@ -41,9 +44,10 @@ export async function trackNewApplication(
         follow_up_reminder_date,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
+        googleId,
         application.id,
         application.jobId,
         application.status,
@@ -60,12 +64,16 @@ export async function trackNewApplication(
   }
 }
 
-export async function getTrackedApplications(): Promise<TrackedApplication[]> {
+export async function getTrackedApplications(
+  googleId: String,
+): Promise<TrackedApplication[]> {
   try {
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT 
         t.id,
         t.job_id AS jobId,
+        t.google_id As googleId,
         j.title AS jobTitle,
         j.employer,
         j.location,
@@ -79,8 +87,11 @@ export async function getTrackedApplications(): Promise<TrackedApplication[]> {
         t.updated_at AS updatedAt
       FROM tracked_applications t
       inner join jobs j ON t.job_id = j.id
+      where t.google_id = ?
       ORDER BY t.updated_at DESC
-    `);
+    `,
+      [googleId],
+    );
 
     return rows as TrackedApplication[];
   } catch (error) {
@@ -90,6 +101,7 @@ export async function getTrackedApplications(): Promise<TrackedApplication[]> {
 }
 
 export async function updateTrackedApplication(
+  googleId: string,
   id: string,
   updates: UpdateTrackedApplication,
 ): Promise<void> {
@@ -120,12 +132,12 @@ export async function updateTrackedApplication(
     // Always update timestamp when something changes
     fields.push("updated_at = CURRENT_TIMESTAMP");
 
-    values.push(id);
+    values.push(id, googleId);
 
     const sql = `
       UPDATE tracked_applications
       SET ${fields.join(", ")}
-      WHERE id = ?
+      WHERE id = ? and google_id = ?
     `;
 
     await db.query(sql, values);
@@ -135,9 +147,15 @@ export async function updateTrackedApplication(
   }
 }
 
-export async function deleteTrackedApplication(id: string): Promise<void> {
+export async function deleteTrackedApplication(
+  googleId: string,
+  id: string,
+): Promise<void> {
   try {
-    await db.query("DELETE FROM tracked_applications WHERE id = ?", [id]);
+    await db.query(
+      "DELETE FROM tracked_applications WHERE id = ? and google_id = ?",
+      [id, googleId],
+    );
   } catch (error) {
     console.error("Error deleting tracked application:", error);
     throw error;

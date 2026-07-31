@@ -1,64 +1,43 @@
 import { Request, Response } from "express";
 import {
   getCandidateProfile,
-  saveCandidateProfile,
   updateCandidateProfile,
 } from "../models/candidateProfile";
 
-import { INITIAL_CANDIDATE_PROFILE } from "../../src/data/mockJobs";
 import { CandidateProfile } from "../../src/types";
 import { parseCvWithGemini } from "../services/gemini";
 
-let profileId = 1;
-export let storedCandidateProfile: CandidateProfile;
-
-try {
-  const existingProfile = (await getCandidateProfile(
-    profileId,
-  )) as CandidateProfile | null;
-
-  if (existingProfile && Object.keys(existingProfile).length > 0) {
-    storedCandidateProfile = existingProfile;
-  } else {
-    storedCandidateProfile = {
-      ...INITIAL_CANDIDATE_PROFILE,
-    };
-
-    await saveCandidateProfile(storedCandidateProfile);
-  }
-} catch (err) {
-  console.error("Error retrieving candidate profile:", err);
-
-  storedCandidateProfile = {
-    ...INITIAL_CANDIDATE_PROFILE,
-  };
-
-  await saveCandidateProfile(storedCandidateProfile);
-}
+export let candidateProfile: CandidateProfile;
 
 export const getProfile = async (req: Request, res: Response) => {
-  res.json({ success: true, profile: storedCandidateProfile });
+  const googleId = (req as any).user!.googleId;
+  res.json({
+    success: true,
+    profile: await getCandidateProfile(googleId),
+  });
 };
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const updatedProfile = req.body;
+    const googleId = (req as any).user!.googleId;
     if (!updatedProfile || !updatedProfile.fullName) {
       return res.status(400).json({
         success: false,
         error: "Valid candidate profile object is required.",
       });
     }
-    storedCandidateProfile = {
+    let candidateProfile = {
+      ...(await getCandidateProfile(googleId)),
       ...updatedProfile,
       lastUpdated: new Date().toISOString(),
     };
-    updateCandidateProfile(profileId, storedCandidateProfile).catch((err) => {
+    updateCandidateProfile(googleId, candidateProfile).catch((err) => {
       console.error("Error updating candidate profile in database:", err);
     });
     res.json({
       success: true,
-      profile: storedCandidateProfile,
+      profile: candidateProfile,
       message: "Profile saved successfully.",
     });
   } catch (error: any) {
@@ -69,6 +48,7 @@ export const updateProfile = async (req: Request, res: Response) => {
 export const parseCandidateCv = async (req: Request, res: Response) => {
   try {
     const { rawText, fileBase64, mimeType } = req.body;
+    const googleId = (req as any).user!.googleId;
     if (!rawText && !fileBase64) {
       return res.status(400).json({
         success: false,
@@ -76,18 +56,23 @@ export const parseCandidateCv = async (req: Request, res: Response) => {
       });
     }
 
-    const parsedData = await parseCvWithGemini(rawText, fileBase64, mimeType);
+    const parsedData: Partial<CandidateProfile> = await parseCvWithGemini(
+      rawText,
+      fileBase64,
+      mimeType,
+    );
 
-    // Merge parsed data into candidate profile
-    storedCandidateProfile = {
-      ...storedCandidateProfile,
+    let candidateProfile = {
+      ...(await getCandidateProfile(googleId)),
       ...parsedData,
       lastUpdated: new Date().toISOString(),
-    } as CandidateProfile;
+    };
+
+    await updateCandidateProfile(googleId, candidateProfile);
 
     res.json({
       success: true,
-      profile: storedCandidateProfile,
+      profile: await getCandidateProfile(googleId),
       parsedData,
       message: "CV successfully analyzed and candidate profile created.",
     });
