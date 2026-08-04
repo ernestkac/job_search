@@ -1,6 +1,28 @@
-import React, { useState } from 'react';
-import { CandidateProfile, JobListing, JobMatchAnalysis, TrackedApplication } from '../types';
-import { Sparkles, Briefcase, CheckCircle2, Calendar, FileText, ArrowRight, TrendingUp, AlertTriangle, Search, PlusCircle } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  CandidateProfile,
+  JobListing,
+  JobMatchAnalysis,
+  TrackedApplication,
+} from "../types";
+import {
+  Sparkles,
+  Briefcase,
+  CheckCircle2,
+  Calendar,
+  FileText,
+  ArrowRight,
+  TrendingUp,
+  AlertTriangle,
+  Search,
+  PlusCircle,
+  User as UserIcon,
+  ChevronDown,
+  X,
+} from "lucide-react";
+import sendingApplicationTutorial from "../../assets/tutorials/sending_application_tutorial.mp4";
+import profileTutorialVideo from "../../assets/tutorials/Upload And Manage CV Profiles In Ernktech AI Job Search  Guidde.mp4";
+import jobUrlTutorialVideo from "../../assets/tutorials/url_job_fetch.mp4";
 
 interface DashboardViewProps {
   profile: CandidateProfile;
@@ -8,7 +30,9 @@ interface DashboardViewProps {
   matchesMap: Record<string, JobMatchAnalysis>;
   applications: TrackedApplication[];
   onSelectJob: (job: JobListing) => void;
-  onNavigateTab: (tab: 'dashboard' | 'jobs' | 'profile' | 'applications') => void;
+  onNavigateTab: (
+    tab: "dashboard" | "jobs" | "profile" | "applications",
+  ) => void;
   onIngestUrl: (url: string) => void;
 }
 
@@ -21,37 +45,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateTab,
   onIngestUrl,
 }) => {
-  const [pastedUrl, setPastedUrl] = useState('');
+  const [pastedUrl, setPastedUrl] = useState("");
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [activeTutorial, setActiveTutorial] = useState<
+    "profile" | "applications" | "jobs" | null
+  >(null);
 
   // Calculate metrics
-  const activeJobs = jobs.filter(j => !j.isExpired);
-  
+  const activeJobs = jobs.filter((j) => !j.isExpired);
+
   // Calculate high compatibility count (>75%)
-  const highMatchJobs = jobs.filter(j => {
+  const highMatchJobs = jobs.filter((j) => {
     const m = matchesMap[j.id];
     return m && m.compatibilityScore >= 75;
   });
 
   // Calculate upcoming deadlines (within 14 days)
-  const urgentDeadlines = activeJobs.filter(j => {
+  const urgentDeadlines = activeJobs.filter((j) => {
     if (!j.closingDate) return false;
-    const diffDays = Math.ceil((new Date(j.closingDate).getTime() - new Date('2026-07-23').getTime()) / (1000 * 3600 * 24));
+    const diffDays = Math.ceil(
+      (new Date(j.closingDate).getTime() - new Date("2026-07-23").getTime()) /
+        (1000 * 3600 * 24),
+    );
     return diffDays >= 0 && diffDays <= 14;
   });
 
   // Top recommended sorted by compatibility
-  const topRecommendations = [...jobs].sort((a, b) => {
-    const scoreA = matchesMap[a.id]?.compatibilityScore || 0;
-    const scoreB = matchesMap[b.id]?.compatibilityScore || 0;
-    return scoreB - scoreA;
-  }).slice(0, 4);
+  const topRecommendations = [...jobs]
+    .sort((a, b) => {
+      const scoreA = matchesMap[a.id]?.compatibilityScore || 0;
+      const scoreB = matchesMap[b.id]?.compatibilityScore || 0;
+      return scoreB - scoreA;
+    })
+    .slice(0, 4);
 
   const handleIngestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pastedUrl.trim()) {
       onIngestUrl(pastedUrl.trim());
-      setPastedUrl('');
+      setPastedUrl("");
     }
+  };
+
+  const tutorialContent = {
+    profile: {
+      title: "Setting Up Your Profile",
+      subtitle: "Learn how to complete your CV profile",
+      videoSrc: profileTutorialVideo,
+    },
+    applications: {
+      title: "Sending Applications",
+      subtitle: "Follow the walkthrough for submitting applications",
+      videoSrc: sendingApplicationTutorial,
+    },
+    jobs: {
+      title: "Using Job URLs",
+      subtitle: "See how to ingest a vacancy link and match it",
+      videoSrc: jobUrlTutorialVideo,
+    },
   };
 
   return (
@@ -65,23 +116,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>AI Job Finder &amp; Candidate Match Engine</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif text-[#2D2D2A] leading-tight">
-              Welcome back, <span className="italic text-[#5A5A40] font-normal">{profile.fullName || 'ICT Professional'}</span>
+              Welcome back,{" "}
+              <span className="italic text-[#5A5A40] font-normal">
+                {profile.fullName || "ICT Professional"}
+              </span>
             </h1>
             <p className="text-[#2D2D2A]/70 text-sm leading-relaxed font-sans">
-              Targeted for ICT, Computer Science, Systems Administration, Software Engineering, Cybersecurity &amp; Database roles across Malawi.
+              Targeted for ICT, Computer Science, Systems Administration,
+              Software Engineering, Cybersecurity &amp; Database roles across
+              Malawi.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
-              onClick={() => onNavigateTab('jobs')}
+              onClick={() => onNavigateTab("jobs")}
               className="px-5 py-3 rounded-2xl bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-widest shadow-xs transition flex items-center justify-center space-x-2"
             >
               <Search className="h-4 w-4" />
               <span>Explore All {jobs.length} Vacancies</span>
             </button>
             <button
-              onClick={() => onNavigateTab('profile')}
+              onClick={() => onNavigateTab("profile")}
               className="px-4 py-3 rounded-2xl bg-[#E5E5DF] hover:bg-[#D4D3C9] text-[#5A5A40] border border-[#D4D3C9] font-bold text-xs uppercase tracking-widest transition flex items-center justify-center space-x-2"
             >
               <span>Edit Candidate CV</span>
@@ -90,83 +146,217 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
+      {/* Quick Tutorials */}
+      <div className="bg-white rounded-3xl border border-[#D4D3C9] shadow-sm">
+        <button
+          type="button"
+          onClick={() => setIsTutorialOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between gap-3 p-5 sm:p-6 text-left"
+        >
+          <div>
+            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-[#5A5A40]">
+              <Sparkles className="h-4 w-4" />
+              <span>Quick Start Tutorials</span>
+            </div>
+            <h2 className="text-lg font-serif text-[#2D2D2A] mt-1">
+              Learn the key actions in a few clicks
+            </h2>
+          </div>
+          <ChevronDown
+            className={`h-5 w-5 text-[#5A5A40] transition-transform ${isTutorialOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {isTutorialOpen && (
+          <div className="border-t border-[#D4D3C9] p-5 sm:p-6 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveTutorial("profile")}
+              className="group rounded-2xl border border-[#D4D3C9] bg-[#F8F7F4] p-4 hover:border-[#5A5A40] hover:bg-white transition text-left"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#2D2D2A]">
+                <UserIcon className="h-4 w-4 text-[#5A5A40]" />
+                <span>Setting Up Your Profile</span>
+              </div>
+              <p className="mt-2 text-xs text-[#2D2D2A]/70">
+                Learn how to complete your CV profile so the matching engine
+                works accurately.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTutorial("applications")}
+              className="group rounded-2xl border border-[#D4D3C9] bg-[#F8F7F4] p-4 hover:border-[#5A5A40] hover:bg-white transition text-left"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#2D2D2A]">
+                <FileText className="h-4 w-4 text-[#5A5A40]" />
+                <span>Sending Applications</span>
+              </div>
+              <p className="mt-2 text-xs text-[#2D2D2A]/70">
+                Follow the walkthrough for submitting applications and attaching
+                your documents.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTutorial("jobs")}
+              className="group rounded-2xl border border-[#D4D3C9] bg-[#F8F7F4] p-4 hover:border-[#5A5A40] hover:bg-white transition text-left"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#2D2D2A]">
+                <Search className="h-4 w-4 text-[#5A5A40]" />
+                <span>Using Job URLs</span>
+              </div>
+              <p className="mt-2 text-xs text-[#2D2D2A]/70">
+                See how to ingest a vacancy link and turn it into a match-ready
+                application flow.
+              </p>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {activeTutorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2D2D2A]/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl rounded-3xl border border-[#D4D3C9] bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#D4D3C9] bg-[#F8F7F4] px-4 py-3 sm:px-6">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#5A5A40]">
+                  Offline Tutorial
+                </p>
+                <h3 className="text-lg font-serif text-[#2D2D2A]">
+                  {tutorialContent[activeTutorial].title}
+                </h3>
+                <p className="text-xs text-[#2D2D2A]/70">
+                  {tutorialContent[activeTutorial].subtitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTutorial(null)}
+                className="rounded-full border border-[#D4D3C9] bg-white p-2 text-[#5A5A40] hover:bg-[#E5E5DF]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="bg-[#2D2D2A] p-3 sm:p-4">
+              <video
+                src={tutorialContent[activeTutorial].videoSrc}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full rounded-2xl bg-black max-h-[70vh]"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Analytics KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-[#D4D3C9] shadow-sm hover:border-[#5A5A40]/40 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">ICT Opportunities</span>
+            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">
+              ICT Opportunities
+            </span>
             <div className="p-2.5 bg-[#F8F7F4] text-[#5A5A40] rounded-xl border border-[#D4D3C9]">
               <Briefcase className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">{activeJobs.length}</span>
+            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">
+              {activeJobs.length}
+            </span>
             <span className="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
               Live &amp; Active
             </span>
           </div>
-          <p className="text-xs text-[#2D2D2A]/60 mt-1">jobsearchmalawi.com listings</p>
+          <p className="text-xs text-[#2D2D2A]/60 mt-1">
+            jobsearchmalawi.com listings
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-[#D4D3C9] shadow-sm hover:border-[#5A5A40]/40 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">Top Matches (&gt;75%)</span>
+            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">
+              Top Matches (&gt;75%)
+            </span>
             <div className="p-2.5 bg-[#F8F7F4] text-[#5A5A40] rounded-xl border border-[#D4D3C9]">
               <TrendingUp className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">{highMatchJobs.length}</span>
+            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">
+              {highMatchJobs.length}
+            </span>
             <span className="text-[10px] font-bold uppercase text-[#5A5A40] bg-[#E5E5DF] px-2.5 py-1 rounded-full border border-[#D4D3C9]">
               High Fit
             </span>
           </div>
-          <p className="text-xs text-[#2D2D2A]/60 mt-1">Based on genuine CV skills</p>
+          <p className="text-xs text-[#2D2D2A]/60 mt-1">
+            Based on genuine CV skills
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-[#D4D3C9] shadow-sm hover:border-[#5A5A40]/40 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">Applications Tracked</span>
+            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">
+              Applications Tracked
+            </span>
             <div className="p-2.5 bg-[#F8F7F4] text-[#5A5A40] rounded-xl border border-[#D4D3C9]">
               <FileText className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">{applications.length}</span>
+            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">
+              {applications.length}
+            </span>
             <span className="text-[10px] font-bold uppercase text-[#5A5A40] bg-[#E5E5DF] px-2.5 py-1 rounded-full border border-[#D4D3C9]">
               Saved / Pipeline
             </span>
           </div>
-          <p className="text-xs text-[#2D2D2A]/60 mt-1">Status tracker active</p>
+          <p className="text-xs text-[#2D2D2A]/60 mt-1">
+            Status tracker active
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-[#D4D3C9] shadow-sm hover:border-[#5A5A40]/40 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">Closing Soon</span>
+            <span className="text-[10px] font-bold uppercase text-[#5A5A40] tracking-widest">
+              Closing Soon
+            </span>
             <div className="p-2.5 bg-[#F8F7F4] text-amber-700 rounded-xl border border-[#D4D3C9]">
               <Calendar className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">{urgentDeadlines.length}</span>
+            <span className="text-2xl font-serif font-bold text-[#2D2D2A]">
+              {urgentDeadlines.length}
+            </span>
             <span className="text-[10px] font-bold uppercase text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
               Next 14 Days
             </span>
           </div>
-          <p className="text-xs text-[#2D2D2A]/60 mt-1">Action required before closing</p>
+          <p className="text-xs text-[#2D2D2A]/60 mt-1">
+            Action required before closing
+          </p>
         </div>
       </div>
 
       {/* Fast URL Ingest Input Card */}
       <div className="bg-[#2D2D2A] text-white rounded-2xl p-5 border border-[#2D2D2A] shadow-sm">
-        <form onSubmit={handleIngestSubmit} className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <form
+          onSubmit={handleIngestSubmit}
+          className="flex flex-col md:flex-row items-center justify-between gap-4"
+        >
           <div className="space-y-1 w-full md:w-auto">
             <div className="flex items-center space-x-2 text-[#E5E5DF] font-bold text-xs uppercase tracking-wider">
               <PlusCircle className="h-4 w-4 text-[#D4D3C9]" />
               <span>Ingest Specific Job URL</span>
             </div>
             <p className="text-xs text-[#D4D3C9]/80 font-sans">
-              Paste any vacancy page link from jobsearchmalawi.com to parse, evaluate match, and generate a tailored application letter.
+              Paste any vacancy page link from jobsearchmalawi.com to parse,
+              evaluate match, and generate a tailored application letter.
             </p>
           </div>
           <div className="flex w-full md:w-auto items-center space-x-2">
@@ -195,12 +385,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl sm:text-2xl font-serif font-light text-[#2D2D2A] flex items-center space-x-2">
-                <span>Matches from <span className="italic text-[#5A5A40]">jobsearchmalawi.com</span></span>
+                <span>
+                  Matches from{" "}
+                  <span className="italic text-[#5A5A40]">
+                    jobsearchmalawi.com
+                  </span>
+                </span>
               </h2>
-              <p className="text-xs text-[#2D2D2A]/60">Ranked by genuine technical CV background compatibility</p>
+              <p className="text-xs text-[#2D2D2A]/60">
+                Ranked by genuine technical CV background compatibility
+              </p>
             </div>
             <button
-              onClick={() => onNavigateTab('jobs')}
+              onClick={() => onNavigateTab("jobs")}
               className="text-xs font-bold uppercase tracking-wider text-[#5A5A40] hover:underline flex items-center space-x-1"
             >
               <span>View All ({jobs.length})</span>
@@ -224,7 +421,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#E5E5DF] text-[#5A5A40] uppercase tracking-wider border border-[#D4D3C9]">
                         {job.category}
                       </span>
-                      
+
                       {/* Match score pill */}
                       <div className="flex items-center space-x-1.5 bg-[#F8F7F4] border border-[#D4D3C9] px-3 py-1 rounded-full text-xs font-serif font-bold text-[#5A5A40]">
                         <Sparkles className="h-3.5 w-3.5 text-amber-600" />
@@ -236,16 +433,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <h3 className="font-bold text-[#2D2D2A] text-base group-hover:text-[#5A5A40] transition line-clamp-1">
                         {job.title}
                       </h3>
-                      <p className="text-xs font-semibold text-[#5A5A40] mt-1">{job.employer}</p>
-                      <p className="text-xs text-[#2D2D2A]/60">{job.location}</p>
+                      <p className="text-xs font-semibold text-[#5A5A40] mt-1">
+                        {job.employer}
+                      </p>
+                      <p className="text-xs text-[#2D2D2A]/60">
+                        {job.location}
+                      </p>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">
-                      {job.requiredTechnicalSkills.slice(0, 3).map((skill, i) => (
-                        <span key={i} className="text-[11px] bg-[#F8F7F4] text-[#2D2D2A]/80 px-2.5 py-0.5 rounded-md border border-[#D4D3C9] font-medium">
-                          {skill}
-                        </span>
-                      ))}
+                      {job.requiredTechnicalSkills
+                        .slice(0, 3)
+                        .map((skill, i) => (
+                          <span
+                            key={i}
+                            className="text-[11px] bg-[#F8F7F4] text-[#2D2D2A]/80 px-2.5 py-0.5 rounded-md border border-[#D4D3C9] font-medium"
+                          >
+                            {skill}
+                          </span>
+                        ))}
                     </div>
                   </div>
 
@@ -269,9 +475,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-5 border border-[#D4D3C9] shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-[#D4D3C9] pb-3">
-              <h3 className="text-xs font-bold text-[#5A5A40] uppercase tracking-[0.1em]">Active Pipeline</h3>
+              <h3 className="text-xs font-bold text-[#5A5A40] uppercase tracking-[0.1em]">
+                Active Pipeline
+              </h3>
               <button
-                onClick={() => onNavigateTab('applications')}
+                onClick={() => onNavigateTab("applications")}
                 className="text-[11px] font-bold text-[#5A5A40] uppercase tracking-wider hover:underline"
               >
                 Manage Tracker
@@ -280,13 +488,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="space-y-3">
               {[
-                { label: 'Saved / Interested', count: applications.filter(a => a.status === 'Interested' || a.status === 'New').length, accent: 'border-l-amber-500' },
-                { label: 'Letter Generated', count: applications.filter(a => a.status === 'Letter Generated').length, accent: 'border-l-purple-500' },
-                { label: 'Submitted / Applied', count: applications.filter(a => a.status === 'Applied').length, accent: 'border-l-emerald-500' },
-                { label: 'Interviews Scheduled', count: applications.filter(a => a.status === 'Interview').length, accent: 'border-l-[#5A5A40]' },
+                {
+                  label: "Saved / Interested",
+                  count: applications.filter(
+                    (a) => a.status === "Interested" || a.status === "New",
+                  ).length,
+                  accent: "border-l-amber-500",
+                },
+                {
+                  label: "Letter Generated",
+                  count: applications.filter(
+                    (a) => a.status === "Letter Generated",
+                  ).length,
+                  accent: "border-l-purple-500",
+                },
+                {
+                  label: "Submitted / Applied",
+                  count: applications.filter((a) => a.status === "Applied")
+                    .length,
+                  accent: "border-l-emerald-500",
+                },
+                {
+                  label: "Interviews Scheduled",
+                  count: applications.filter((a) => a.status === "Interview")
+                    .length,
+                  accent: "border-l-[#5A5A40]",
+                },
               ].map((item, idx) => (
-                <div key={idx} className={`p-3 rounded-xl bg-[#F8F7F4] border-l-4 ${item.accent} border border-[#D4D3C9] flex items-center justify-between text-xs`}>
-                  <span className="font-semibold text-[#2D2D2A]">{item.label}</span>
+                <div
+                  key={idx}
+                  className={`p-3 rounded-xl bg-[#F8F7F4] border-l-4 ${item.accent} border border-[#D4D3C9] flex items-center justify-between text-xs`}
+                >
+                  <span className="font-semibold text-[#2D2D2A]">
+                    {item.label}
+                  </span>
                   <span className="font-serif font-bold text-sm text-[#5A5A40] px-2 py-0.5 bg-white rounded-lg border border-[#D4D3C9]">
                     {item.count}
                   </span>
@@ -303,7 +538,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {urgentDeadlines.length === 0 ? (
-              <p className="text-xs text-[#2D2D2A]/60 italic">No urgent deadlines in the next 14 days.</p>
+              <p className="text-xs text-[#2D2D2A]/60 italic">
+                No urgent deadlines in the next 14 days.
+              </p>
             ) : (
               <div className="space-y-2">
                 {urgentDeadlines.slice(0, 3).map((job) => (
@@ -312,10 +549,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onClick={() => onSelectJob(job)}
                     className="p-3 bg-[#F8F7F4] rounded-xl border border-[#D4D3C9] cursor-pointer hover:border-[#5A5A40] transition"
                   >
-                    <p className="text-xs font-bold text-[#2D2D2A] line-clamp-1">{job.title}</p>
+                    <p className="text-xs font-bold text-[#2D2D2A] line-clamp-1">
+                      {job.title}
+                    </p>
                     <div className="flex items-center justify-between text-[11px] text-[#5A5A40] mt-1">
                       <span>{job.employer}</span>
-                      <span className="font-bold text-amber-800">Closes: {job.closingDate}</span>
+                      <span className="font-bold text-amber-800">
+                        Closes: {job.closingDate}
+                      </span>
                     </div>
                   </div>
                 ))}
