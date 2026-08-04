@@ -620,7 +620,7 @@ export default function App() {
       <footer className="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
-            © 2026 AI Job Finder &amp; Application Assistant • Monitoring
+            © 2026 AI Job Search &amp; Application Assistant • Monitoring
             jobsearchmalawi.com
           </p>
           <div className="flex items-center space-x-4">
@@ -628,10 +628,10 @@ export default function App() {
               onClick={() => setIsArchModalOpen(true)}
               className="hover:text-white transition"
             >
-              System Proposal Specs
+              Developer Ernest Kachingwe
             </button>
             <span>•</span>
-            <span>ICT / Tech Roles Malawi</span>
+            <span>Ern Tech Malawi</span>
           </div>
         </div>
       </footer>

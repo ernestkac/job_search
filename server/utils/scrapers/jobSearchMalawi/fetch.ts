@@ -58,11 +58,11 @@ export async function fetchJobSearchMalawiJobs(
       params.append("filter_job_type[]", type);
     }
 
-    params.append("per_page", "12");
+    params.append("per_page", "48");
     params.append("orderby", "featured");
     params.append("featured_first", "false");
     params.append("order", "DESC");
-    params.append("page", "1");
+    params.append("page", "4");
     params.append("remote_position", "");
     params.append("show_pagination", "false");
 

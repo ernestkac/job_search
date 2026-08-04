@@ -1,4 +1,5 @@
 import React from "react";
+import aiLogo from "../../assets/ai_job_search_logo.png";
 import {
   Briefcase,
   FileText,
@@ -53,9 +54,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => setActiveTab("dashboard")}
           >
-            <div className="h-10 w-10 rounded-xl bg-[#5A5A40] flex items-center justify-center text-white shadow-xs font-serif font-bold text-xl">
-              J
-            </div>
+            <img
+              src={aiLogo}
+              alt="AI Job Search logo"
+              className="h-10 w-10 rounded-xl object-cover border border-[#D4D3C9] shadow-xs"
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-semibold text-lg tracking-tight text-[#2D2D2A]">
