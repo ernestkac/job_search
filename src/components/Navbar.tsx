@@ -67,11 +67,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     Malawi
                   </span>
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9] uppercase tracking-wider">
+                <span className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9] uppercase tracking-wider">
                   ICT
                 </span>
               </div>
-              <p className="text-xs text-[#5A5A40]/70 font-medium flex items-center gap-1.5">
+              <p className="hidden sm:flex text-xs text-[#5A5A40]/70 font-medium items-center gap-1.5">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                 Monitoring jobsearchmalawi.com
               </p>

@@ -1,0 +1,23 @@
+{
+  "name": "JobAssist Malawi",
+  "short_name": "JobAssist",
+  "description": "AI-powered ICT job matching and application tracking for Malawi professionals",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8F7F4",
+  "theme_color": "#2D2D2A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/ai_job_search_logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/ai_job_search_logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

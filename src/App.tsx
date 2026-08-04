@@ -378,6 +378,11 @@ export default function App() {
         onRefreshJobs={handleRefreshJobs}
         candidateName={profile.fullName}
         candidatePhotoUrl={profile.photoUrl}
+        user={{
+          displayName: profile.fullName,
+          email: profile.email,
+          photoURL: profile.photoUrl,
+        }}
         onSignOut={handleSignOut}
       />
 
