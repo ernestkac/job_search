@@ -14,6 +14,7 @@ interface GmailAttachmentPayload {
   mimeType?: string;
   dataUrl?: string;
   base64?: string;
+  filePath?: string;
 }
 
 function base64ToBase64Url(value: string): string {
