@@ -150,7 +150,10 @@ export function generateHeuristicCoverLetter(
     .slice(0, 5)
     .join(", ");
 
-  return `${profile.fullName || "Candidate"}
+  const sanitizeText = (value: string) =>
+    value.replace(/[\u2013\u2014]/g, "-").replace(/\*/g, "");
+
+  return sanitizeText(`${profile.fullName || "Candidate"}
 ${profile.email ? `Email: ${profile.email}` : ""} ${profile.phone ? `| Phone: ${profile.phone}` : ""}
 ${profile.location || "Malawi"}
 
@@ -172,7 +175,7 @@ ${customNote ? `Additional notes regarding this application: ${customNote}\n\n` 
 
 Yours faithfully,
 
-${profile.fullName || "Applicant"}`;
+${profile.fullName || "Applicant"}`);
 }
 
 /**
@@ -190,6 +193,7 @@ You are an expert AI HR Specialist and Resume Parser.
 Analyze the provided Curriculum Vitae (CV) / resume and extract a comprehensive, accurately structured Candidate Profile.
 
 Extract details strictly present in the document. Do not invent achievements, degrees, or false companies.
+If the CV contains references or referees, extract them as an array of objects with name, position, organization, phone, and email. If no references are present, return an empty array.
 Return a structured JSON object.
   `;
 
@@ -339,6 +343,20 @@ Return a structured JSON object.
                   required: ["title", "description", "technologiesUsed"],
                 },
               },
+              references: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    position: { type: Type.STRING },
+                    organization: { type: Type.STRING },
+                    phone: { type: Type.STRING },
+                    email: { type: Type.STRING },
+                  },
+                  required: ["name", "position", "organization"],
+                },
+              },
               achievements: { type: Type.ARRAY, items: { type: Type.STRING } },
             },
             required: [
@@ -350,6 +368,7 @@ Return a structured JSON object.
               "workExperience",
               "education",
               "certifications",
+              "references",
             ],
           },
         },
@@ -368,9 +387,28 @@ Return a structured JSON object.
       /(\+?\d{1,4}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/,
     );
 
+    const referenceSection = text.match(
+      /(?:references?|referees?)[^\n]{0,200}([\s\S]{0,1200})/i,
+    );
+    const fallbackReferences = referenceSection
+      ? referenceSection[1]
+          .split(/\n|\r/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .slice(0, 4)
+          .map((line) => ({
+            name: line,
+            position: "",
+            organization: "",
+            phone: undefined,
+            email: undefined,
+          }))
+      : [];
+
     return {
       email: emailMatch ? emailMatch[0] : undefined,
       phone: phoneMatch ? phoneMatch[0] : undefined,
+      references: fallbackReferences,
       summary: text ? text.slice(0, 350) : "Candidate CV details extracted.",
     };
   }
@@ -550,9 +588,9 @@ Generate the full formal application letter text now in Markdown format.
       }),
     );
 
-    return (
-      response.text || generateHeuristicCoverLetter(profile, job, customNote)
-    );
+    const generatedLetter =
+      response.text || generateHeuristicCoverLetter(profile, job, customNote);
+    return generatedLetter.replace(/[\u2013\u2014]/g, "-");
   } catch (err: any) {
     console.warn(
       `Cover Letter AI generation fallback used for ${job.id}:`,

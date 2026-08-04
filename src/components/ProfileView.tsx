@@ -26,6 +26,7 @@ import {
   FileCheck,
   Eye,
 } from "lucide-react";
+import { apiRemoveCertificate, apiUploadCertificate } from "../lib/api";
 
 interface ProfileViewProps {
   profile: CandidateProfile;
@@ -94,10 +95,130 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleSave = async () => {
     setIsSaving(true);
-    await onSaveProfile(formData);
-    setIsSaving(false);
-    setSaveSuccessMsg(true);
-    setTimeout(() => setSaveSuccessMsg(false), 3000);
+    try {
+      await onSaveProfile(formData);
+      setSaveSuccessMsg(true);
+      setTimeout(() => setSaveSuccessMsg(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUploadCertificates = async (files: File[]) => {
+    if (!files.length) return;
+
+    setCertError(null);
+    setIsSaving(true);
+
+    try {
+      const uploadedCertificates: UploadedCertificate[] = [];
+
+      for (const file of files) {
+        if (
+          !file.name.toLowerCase().endsWith(".pdf") &&
+          file.type !== "application/pdf"
+        ) {
+          setCertError(
+            `File "${file.name}" is not a PDF. Only PDF documents are allowed.`,
+          );
+          continue;
+        }
+
+        if (file.size > 15 * 1024 * 1024) {
+          setCertError(`File "${file.name}" exceeds 15 MB limit.`);
+          continue;
+        }
+
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve(event.target?.result as string);
+          reader.onerror = () =>
+            reject(new Error("Failed to read certificate."));
+          reader.readAsDataURL(file);
+        });
+
+        const savedCertificate = await apiUploadCertificate({
+          fileName: file.name,
+          mimeType: file.type || "application/pdf",
+          fileDataUrl: dataUrl,
+        });
+
+        const cleanName = file.name
+          .replace(/\.pdf$/i, "")
+          .replace(/[-_]/g, " ");
+
+        uploadedCertificates.push({
+          id: `cert-doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+          fileName: savedCertificate.fileName || file.name,
+          fileSize: savedCertificate.fileSize || file.size,
+          uploadedAt: savedCertificate.uploadedAt || new Date().toISOString(),
+          filePath: savedCertificate.filePath,
+          mimeType: savedCertificate.mimeType || file.type || "application/pdf",
+          fileDataUrl: dataUrl,
+        });
+      }
+
+      if (uploadedCertificates.length === 0) {
+        return;
+      }
+
+      const nextProfile = {
+        ...formData,
+        certificates: [
+          ...(formData.certificates || []),
+          ...uploadedCertificates,
+        ],
+      };
+
+      setFormData(nextProfile);
+      await onSaveProfile(nextProfile);
+      setSaveSuccessMsg(true);
+      setTimeout(() => setSaveSuccessMsg(false), 3000);
+    } catch (error: any) {
+      setCertError(error?.message || "Failed to save certificate upload.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePreviewCertificate = (cert: UploadedCertificate) => {
+    const previewUrl = cert.fileDataUrl
+      ? cert.fileDataUrl
+      : cert.filePath
+        ? `/${cert.filePath.replace(/\\/g, "/")}`
+        : null;
+
+    if (!previewUrl) {
+      setCertError("This certificate cannot be previewed yet.");
+      return;
+    }
+
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleRemoveCertificate = async (index: number) => {
+    const targetCertificate = (formData.certificates || [])[index];
+    if (!targetCertificate) return;
+
+    setIsSaving(true);
+    setCertError(null);
+
+    try {
+      const updatedProfile = await apiRemoveCertificate(targetCertificate.id);
+      const nextProfile = {
+        ...formData,
+        certificates: updatedProfile.certificates || [],
+      };
+
+      setFormData(nextProfile);
+      setSaveSuccessMsg(true);
+      setTimeout(() => setSaveSuccessMsg(false), 3000);
+    } catch (error: any) {
+      setCertError(error?.message || "Failed to remove certificate.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Skill category updater
@@ -923,53 +1044,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </p>
             </div>
 
-            <label className="inline-block px-4 py-2 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition shadow-xs">
+            <label className="relative inline-flex px-4 py-2 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition shadow-xs">
               <span>Select PDF Certificate</span>
               <input
                 type="file"
                 accept="application/pdf"
                 multiple
-                onChange={(e) => {
-                  setCertError(null);
+                onChange={async (e) => {
                   const files: File[] = Array.from(e.target.files || []);
-                  files.forEach((file: File) => {
-                    if (
-                      !file.name.toLowerCase().endsWith(".pdf") &&
-                      file.type !== "application/pdf"
-                    ) {
-                      setCertError(
-                        `File "${file.name}" is not a PDF. Only PDF documents are allowed.`,
-                      );
-                      return;
-                    }
-                    if (file.size > 15 * 1024 * 1024) {
-                      setCertError(`File "${file.name}" exceeds 15 MB limit.`);
-                      return;
-                    }
+                  if (!files.length) return;
 
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const dataUrl = event.target?.result as string;
-                      const cleanName = file.name
-                        .replace(/\.pdf$/i, "")
-                        .replace(/[-_]/g, " ");
-                      const newCert: UploadedCertificate = {
-                        id: `cert-doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-                        name:
-                          cleanName.charAt(0).toUpperCase() +
-                          cleanName.slice(1),
-                        fileName: file.name,
-                        fileSize: file.size,
-                        uploadedAt: new Date().toISOString(),
-                        fileDataUrl: dataUrl,
-                      };
-                      setFormData((p) => ({
-                        ...p,
-                        certificates: [...(p.certificates || []), newCert],
-                      }));
-                    };
-                    reader.readAsDataURL(file);
-                  });
+                  await handleUploadCertificates(files);
+                  e.target.value = "";
                 }}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
@@ -1019,14 +1105,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 <div className="flex items-center space-x-2 self-end sm:self-auto">
                   <button
-                    onClick={() => {
-                      const win = window.open();
-                      if (win) {
-                        win.document.write(
-                          `<iframe src="${cert.fileDataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`,
-                        );
-                      }
-                    }}
+                    onClick={() => handlePreviewCertificate(cert)}
                     className="p-2 bg-white hover:bg-[#E5E5DF] text-[#2D2D2A] border border-[#D4D3C9] rounded-xl transition flex items-center space-x-1"
                     title="Preview PDF Certificate"
                   >
@@ -1035,14 +1114,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </button>
 
                   <button
-                    onClick={() => {
-                      setFormData((p) => ({
-                        ...p,
-                        certificates: (p.certificates || []).filter(
-                          (_, i) => i !== idx,
-                        ),
-                      }));
-                    }}
+                    onClick={() => handleRemoveCertificate(idx)}
                     className="p-2 bg-white hover:bg-red-50 text-red-600 border border-[#D4D3C9] rounded-xl transition flex items-center space-x-1"
                     title="Remove Certificate"
                   >

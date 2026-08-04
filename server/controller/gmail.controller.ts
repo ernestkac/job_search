@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { promises as fs } from "fs";
+import path from "path";
 import { google } from "googleapis";
 import {
   clearGmailCredentials,
@@ -121,11 +123,28 @@ export async function sendGmail(req: Request, res: Response) {
       });
     }
 
+    const resolvedAttachments = await Promise.all(
+      (attachments as GmailAttachmentPayload[]).map(async (att) => {
+        if (!att.filePath) {
+          return att;
+        }
+
+        const resolvedPath = path.isAbsolute(att.filePath)
+          ? att.filePath
+          : path.join(process.cwd(), att.filePath);
+        const fileBuffer = await fs.readFile(resolvedPath);
+        return {
+          ...att,
+          base64: fileBuffer.toString("base64"),
+        };
+      }),
+    );
+
     const mimeString = buildMimeMessage(
       recipientEmail,
       subject || "Application Message",
       bodyText || "",
-      attachments as GmailAttachmentPayload[],
+      resolvedAttachments,
     );
 
     const rawBase64 = Buffer.from(mimeString, "utf-8").toString("base64");

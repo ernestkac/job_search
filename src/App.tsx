@@ -61,7 +61,10 @@ export default function App() {
   const [isRefreshingJobs, setIsRefreshingJobs] = useState(false);
   const [isParsingCv, setIsParsingCv] = useState(false);
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
-  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
+  const [generatingLetterJobId, setGeneratingLetterJobId] = useState<
+    string | null
+  >(null);
+  const isGeneratingLetter = generatingLetterJobId !== null;
 
   // Modals State
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
@@ -204,7 +207,7 @@ export default function App() {
 
   // Action: Generate Cover / Application Letter
   const handleGenerateLetter = async (job: JobListing, customNote?: string) => {
-    setIsGeneratingLetter(true);
+    setGeneratingLetterJobId(job.id);
     try {
       const result = await apiGenerateLetter(job.id, customNote, job);
 
@@ -228,7 +231,7 @@ export default function App() {
     } catch (err: any) {
       alert(`Error generating application letter: ${err.message || err}`);
     } finally {
-      setIsGeneratingLetter(false);
+      setGeneratingLetterJobId(null);
     }
   };
 
@@ -411,6 +414,7 @@ export default function App() {
                 onSelectJob={handleSelectJob}
                 onGenerateLetter={handleGenerateLetter}
                 onTrackJob={handleTrackJob}
+                generatingLetterJobId={generatingLetterJobId}
               />
             )}
 
@@ -488,6 +492,7 @@ export default function App() {
           handleGenerateLetter(j);
         }}
         onTrackJob={handleTrackJob}
+        generatingLetterJobId={generatingLetterJobId}
         isTracked={
           selectedJob
             ? applications.some((a) => a.jobId === selectedJob.id)

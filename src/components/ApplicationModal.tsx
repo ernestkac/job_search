@@ -31,7 +31,7 @@ import {
 } from "../lib/pdfService";
 import { EmailAttachment } from "../lib/gmailService";
 import { authorizeGmailWithGoogle } from "../lib/googleauth";
-import { apiSendGmailMessage } from "../lib/api";
+import { apiSendGmailMessage, apiUploadCertificate } from "../lib/api";
 
 interface ApplicationModalProps {
   isOpen: boolean;
@@ -61,7 +61,12 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [emailSubject, setEmailSubject] = useState(
     `Application for ${job.title} - ${candidateProfile.fullName}`,
   );
-  const [coverLetter, setCoverLetter] = useState(coverLetterText);
+  const sanitizeCoverLetterText = (value: string) =>
+    value.replace(/[\u2013\u2014]/g, "-").replace(/\*/g, "");
+
+  const [coverLetter, setCoverLetter] = useState(
+    sanitizeCoverLetterText(coverLetterText),
+  );
   const [combineDocuments, setCombineDocuments] = useState(false); // Requirement #5 Default: Unchecked
   const [certificates, setCertificates] = useState<UploadedCertificate[]>(
     candidateProfile.certificates || [],
@@ -93,6 +98,40 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     "",
   );
 
+  const resolveCertificateBuffer = async (
+    cert: UploadedCertificate,
+  ): Promise<{ arrayBuffer: ArrayBuffer; byteLength: number } | null> => {
+    if (cert.fileDataUrl) {
+      return {
+        arrayBuffer: dataUrlToArrayBuffer(cert.fileDataUrl),
+        byteLength: cert.fileSize || 0,
+      };
+    }
+
+    if (!cert.filePath) {
+      return null;
+    }
+
+    const fileUrl = `/${cert.filePath.replace(/\\/g, "/")}`;
+    const response = await fetch(fileUrl, {
+      headers: {
+        ...(localStorage.getItem("token")
+          ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load certificate from ${fileUrl}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      arrayBuffer,
+      byteLength: arrayBuffer.byteLength,
+    };
+  };
+
   // Generate / Merge PDFs whenever options or input change
   useEffect(() => {
     let isMounted = true;
@@ -111,11 +150,23 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
         const cvPdf = await generateCvPdf(candidateProfile);
 
         // Prepare certificate ArrayBuffers
-        const certBuffers = certificates.map((cert) => ({
-          name: cert.name,
-          buffer: dataUrlToArrayBuffer(cert.fileDataUrl),
-          bytes: cert.fileSize,
-        }));
+        const resolvedCertificates = await Promise.all(
+          certificates.map(async (cert) => {
+            const resolved = await resolveCertificateBuffer(cert);
+            return {
+              name: cert.name,
+              buffer: resolved?.arrayBuffer,
+              bytes: resolved?.byteLength || cert.fileSize || 0,
+            };
+          }),
+        );
+        const certBuffers = resolvedCertificates.filter(
+          (entry) => entry.buffer,
+        ) as Array<{
+          name: string;
+          buffer: ArrayBuffer;
+          bytes: number;
+        }>;
 
         if (combineDocuments) {
           // COMBINE ALL DOCUMENTS INTO ONE PDF
@@ -153,11 +204,21 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
               mimeType: "application/pdf",
               arrayBuffer: cvPdf.arrayBuffer,
             },
-            ...certificates.map((cert) => ({
-              filename: `${cert.name.replace(/[^a-zA-Z0-9_]/g, "_")}.pdf`,
-              mimeType: "application/pdf",
-              arrayBuffer: dataUrlToArrayBuffer(cert.fileDataUrl),
-            })),
+            ...(
+              await Promise.all(
+                certificates.map(async (cert) => {
+                  const resolved = await resolveCertificateBuffer(cert);
+                  if (!resolved) return null;
+                  return {
+                    filename: `${cert.name.replace(/[^a-zA-Z0-9_]/g, "_")}.pdf`,
+                    mimeType: "application/pdf",
+                    arrayBuffer: resolved.arrayBuffer,
+                  };
+                }),
+              )
+            ).filter(
+              Boolean as unknown as (value: any) => value is EmailAttachment,
+            ),
           ];
 
           // Calculate total size across individual PDFs (CV + certificates)
@@ -197,34 +258,55 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const isOverSizeLimit = totalSizeMb > 25.0;
 
   // Handle Certificate Upload directly in modal
-  const handleCertUploadInModal = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertUploadInModal = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const files: File[] = Array.from(e.target.files || []);
-    files.forEach((file: File) => {
+
+    for (const file of files) {
       if (
         !file.name.toLowerCase().endsWith(".pdf") &&
         file.type !== "application/pdf"
       ) {
         alert(`File "${file.name}" is not a PDF.`);
-        return;
+        continue;
       }
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const dataUrl = evt.target?.result as string;
+
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = (evt) => resolve(evt.target?.result as string);
+          reader.onerror = () => reject(new Error("Failed to read file."));
+          reader.readAsDataURL(file);
+        });
+
+        const savedCertificate = await apiUploadCertificate({
+          fileName: file.name,
+          mimeType: file.type || "application/pdf",
+          fileDataUrl: dataUrl,
+        });
+
         const cleanName = file.name
           .replace(/\.pdf$/i, "")
           .replace(/[-_]/g, " ");
+
         const newCert: UploadedCertificate = {
           id: `modal-cert-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
-          fileName: file.name,
-          fileSize: file.size,
-          uploadedAt: new Date().toISOString(),
+          fileName: savedCertificate.fileName || file.name,
+          fileSize: savedCertificate.fileSize || file.size,
+          uploadedAt: savedCertificate.uploadedAt || new Date().toISOString(),
+          filePath: savedCertificate.filePath,
+          mimeType: savedCertificate.mimeType || file.type || "application/pdf",
           fileDataUrl: dataUrl,
         };
+
         setCertificates((prev) => [...prev, newCert]);
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (error: any) {
+        console.error("Certificate upload failed:", error);
+        alert(error?.message || "Failed to upload certificate file.");
+      }
+    }
   };
 
   // Remove certificate
@@ -252,11 +334,33 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
       setSendingStatusMsg("Transmitting application via Gmail API...");
 
+      const storedCertificateAttachments = certificates
+        .filter((cert) => cert.filePath)
+        .map((cert) => ({
+          filename: cert.fileName || cert.name,
+          mimeType: cert.mimeType || "application/pdf",
+          filePath: cert.filePath,
+        }));
+
+      const filteredPdfAttachments = pdfAttachments.filter((attachment) => {
+        if (storedCertificateAttachments.length === 0) return true;
+        const certificatePdfNames = new Set(
+          certificates.map(
+            (cert) => `${cert.name.replace(/[^a-zA-Z0-9_]/g, "_")}.pdf`,
+          ),
+        );
+        return !certificatePdfNames.has(attachment.filename);
+      });
+
+      const attachmentPayload = combineDocuments
+        ? pdfAttachments
+        : [...filteredPdfAttachments, ...storedCertificateAttachments];
+
       const payload = {
         recipientEmail: recipientEmail.trim(),
         subject: emailSubject.trim(),
         bodyText: finalBody,
-        attachments: pdfAttachments,
+        attachments: attachmentPayload,
       };
 
       let result = await apiSendGmailMessage(payload);
@@ -648,7 +752,9 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
                     <textarea
                       value={coverLetter}
-                      onChange={(e) => setCoverLetter(e.target.value)}
+                      onChange={(e) =>
+                        setCoverLetter(sanitizeCoverLetterText(e.target.value))
+                      }
                       rows={12}
                       className="w-full flex-1 p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-xs text-[#2D2D2A] leading-relaxed focus:bg-white focus:outline-none focus:border-[#5A5A40] transition font-sans"
                       placeholder="Cover letter content..."

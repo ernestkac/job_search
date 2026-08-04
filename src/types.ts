@@ -58,6 +58,15 @@ export interface Project {
   link?: string;
 }
 
+export interface Reference {
+  id?: string;
+  name: string;
+  position: string;
+  organization: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface TechnicalSkills {
   systemsAndOS: string[];
   networking: string[];
@@ -74,7 +83,9 @@ export interface UploadedCertificate {
   fileName: string;
   fileSize: number;
   uploadedAt: string;
-  fileDataUrl: string;
+  fileDataUrl?: string;
+  filePath?: string;
+  mimeType?: string;
 }
 
 export interface CandidateProfile {
@@ -92,6 +103,7 @@ export interface CandidateProfile {
   education: Education[];
   certifications: Certification[];
   projects: Project[];
+  references?: Reference[];
   achievements: string[];
   rawCvText?: string;
   lastUpdated?: string;
@@ -174,6 +186,7 @@ export interface ApiEmailAttachment {
   dataUrl?: string;
   arrayBuffer?: ArrayBuffer;
   base64?: string;
+  filePath?: string;
 }
 
 export interface SendGmailRequestPayload {

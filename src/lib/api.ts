@@ -85,6 +85,29 @@ export async function apiParseCv(payload: {
   throw new Error(data.error || "Failed to parse CV");
 }
 
+export async function apiUploadCertificate(payload: {
+  fileName: string;
+  mimeType: string;
+  fileDataUrl: string;
+}): Promise<any> {
+  const data = await apiFetch("/api/candidates/certificates/upload", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (data.success) return data.certificate;
+  throw new Error(data.error || "Failed to upload certificate");
+}
+
+export async function apiRemoveCertificate(
+  certificateId: string,
+): Promise<any> {
+  const data = await apiFetch(`/api/candidates/certificates/${certificateId}`, {
+    method: "DELETE",
+  });
+  if (data.success) return data.profile;
+  throw new Error(data.error || "Failed to remove certificate");
+}
+
 export async function apiAnalyzeMatch(
   jobId: string,
   customJob?: JobListing,
