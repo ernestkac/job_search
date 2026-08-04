@@ -68,11 +68,21 @@ export interface TechnicalSkills {
   toolsAndFrameworks: string[];
 }
 
+export interface UploadedCertificate {
+  id: string;
+  name: string;
+  fileName: string;
+  fileSize: number;
+  uploadedAt: string;
+  fileDataUrl: string;
+}
+
 export interface CandidateProfile {
   fullName: string;
   professionalTitle: string;
   email: string;
   phone: string;
+  photoUrl?: string;
   location: string;
   linkedIn?: string;
   github?: string;
@@ -85,6 +95,7 @@ export interface CandidateProfile {
   achievements: string[];
   rawCvText?: string;
   lastUpdated?: string;
+  certificates?: UploadedCertificate[];
 }
 
 export interface JobListing {
@@ -132,6 +143,11 @@ export interface TrackedApplication {
   notes?: string;
   followUpReminderDate?: string;
   updatedAt: string;
+  sentAt?: string;
+  gmailMessageId?: string;
+  attachmentMode?: "merged" | "individual";
+  recipientEmail?: string;
+  attachmentNames?: string[];
 }
 
 export interface JobFilterState {
@@ -150,4 +166,26 @@ export interface SystemLogs {
   level: "info" | "warn" | "error";
   message: string;
   source: string;
+}
+
+export interface ApiEmailAttachment {
+  filename: string;
+  mimeType?: string;
+  dataUrl?: string;
+  arrayBuffer?: ArrayBuffer;
+  base64?: string;
+}
+
+export interface SendGmailRequestPayload {
+  recipientEmail: string;
+  subject: string;
+  bodyText: string;
+  attachments?: ApiEmailAttachment[];
+}
+
+// Explicit structure for the unified backend API response
+export interface ApiResponse<T = any> {
+  success: boolean;
+  error?: string;
+  [key: string]: any;
 }

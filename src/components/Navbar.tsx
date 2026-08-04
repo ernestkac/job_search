@@ -3,14 +3,19 @@ import {
   Briefcase,
   FileText,
   LayoutDashboard,
-  User,
+  User as UserIcon,
   Globe,
   Code2,
   Sparkles,
   RefreshCw,
   LogOut,
 } from "lucide-react";
-import { User as FirebaseUser } from "../lib/firebase";
+
+interface NavbarUser {
+  displayName?: string;
+  email?: string;
+  photoURL?: string;
+}
 
 interface NavbarProps {
   activeTab: "dashboard" | "jobs" | "profile" | "applications";
@@ -22,8 +27,8 @@ interface NavbarProps {
   isRefreshingJobs: boolean;
   onRefreshJobs: () => void;
   candidateName: string;
-  candidateEmail?: string;
-  user?: FirebaseUser | null;
+  candidatePhotoUrl?: string;
+  user?: NavbarUser | null;
   onSignOut?: () => void;
 }
 
@@ -35,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isRefreshingJobs,
   onRefreshJobs,
   candidateName,
-  candidateEmail,
+  candidatePhotoUrl,
   user,
   onSignOut,
 }) => {
@@ -63,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ICT
                 </span>
               </div>
-              <p className="text-xs text-[#5A5A40]/70 font-medium hidden sm:flex items-center gap-1.5">
+              <p className="text-xs text-[#5A5A40]/70 font-medium flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                 Monitoring jobsearchmalawi.com
               </p>
@@ -104,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : "text-[#2D2D2A]/70 hover:text-[#2D2D2A] hover:bg-[#F8F7F4]"
               }`}
             >
-              <User className="h-4 w-4" />
+              <UserIcon className="h-4 w-4" />
               <span>CV Profile</span>
             </button>
 
@@ -143,28 +148,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Ingest Link</span>
             </button>
 
-            <button
-              onClick={onOpenArchitectureModal}
-              className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#E5E5DF] hover:bg-[#D4D3C9] text-[#5A5A40] border border-[#D4D3C9] transition"
-            >
-              <Code2 className="h-3.5 w-3.5" />
-              <span>Specs</span>
-            </button>
-
             <div className="pl-2 border-l border-[#D4D3C9] flex items-center space-x-2">
               <div className="hidden sm:block text-right text-xs">
                 <p className="font-bold uppercase tracking-wider text-[#2D2D2A] leading-tight truncate max-w-[140px]">
                   {user?.displayName || candidateName || "Candidate"}
                 </p>
                 <p className="text-[10px] text-[#5A5A40]/70 uppercase font-semibold truncate max-w-[140px]">
-                  {user?.email || candidateEmail || "Google User"}
+                  {user?.email || "Google User"}
                 </p>
               </div>
 
-              {user?.photoURL ? (
+              {candidatePhotoUrl || user?.photoURL ? (
                 <img
-                  src={user.photoURL}
-                  alt={user.displayName || "Google Profile"}
+                  src={candidatePhotoUrl || user?.photoURL}
+                  alt={user?.displayName || candidateName || "Google Profile"}
                   className="h-9 w-9 rounded-full border border-[#D4D3C9] object-cover shadow-xs"
                   referrerPolicy="no-referrer"
                 />
@@ -225,7 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : "text-[#2D2D2A]/60"
             }`}
           >
-            <User className="h-4 w-4" />
+            <UserIcon className="h-4 w-4" />
             <span>Profile</span>
           </button>
 

@@ -1,11 +1,40 @@
-import React, { useState } from 'react';
-import { CandidateProfile, WorkExperience, Education, Certification, Project } from '../types';
-import { Upload, Sparkles, User, Briefcase, GraduationCap, Award, Code, Save, Plus, Trash2, CheckCircle2, RefreshCw, FileText } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  CandidateProfile,
+  WorkExperience,
+  Education,
+  Certification,
+  Project,
+  Reference,
+  UploadedCertificate,
+} from "../types";
+import {
+  Upload,
+  Sparkles,
+  User,
+  Briefcase,
+  GraduationCap,
+  Award,
+  Code,
+  Save,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  RefreshCw,
+  FileText,
+  Users,
+  FileCheck,
+  Eye,
+} from "lucide-react";
 
 interface ProfileViewProps {
   profile: CandidateProfile;
   onSaveProfile: (profile: CandidateProfile) => Promise<void>;
-  onParseCv: (payload: { rawText?: string; fileBase64?: string; mimeType?: string }) => Promise<void>;
+  onParseCv: (payload: {
+    rawText?: string;
+    fileBase64?: string;
+    mimeType?: string;
+  }) => Promise<void>;
   isParsingCv: boolean;
 }
 
@@ -15,11 +44,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onParseCv,
   isParsingCv,
 }) => {
-  const [formData, setFormData] = useState<CandidateProfile>({ ...profile });
-  const [rawCvInput, setRawCvInput] = useState('');
-  const [activeTab, setActiveTab] = useState<'upload' | 'personal' | 'skills' | 'experience' | 'education' | 'certifications' | 'projects'>('upload');
+  const [formData, setFormData] = useState<CandidateProfile>({
+    ...profile,
+    references: profile.references || [],
+    certificates: profile.certificates || [],
+  });
+  const [rawCvInput, setRawCvInput] = useState("");
+  const [activeTab, setActiveTab] = useState<
+    | "upload"
+    | "personal"
+    | "skills"
+    | "experience"
+    | "education"
+    | "certifications"
+    | "references"
+    | "certificates"
+  >("upload");
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [certError, setCertError] = useState<string | null>(null);
 
   // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,9 +70,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    
+
     // For plain text files, read as text
-    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+    if (file.type === "text/plain" || file.name.endsWith(".txt")) {
       reader.onload = (event) => {
         const text = event.target?.result as string;
         onParseCv({ rawText: text });
@@ -39,8 +82,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       // For PDF / DOCX, read base64 data URL
       reader.onload = (event) => {
         const result = event.target?.result as string;
-        const base64Data = result.split(',')[1];
-        onParseCv({ fileBase64: base64Data, mimeType: file.type || 'application/pdf' });
+        const base64Data = result.split(",")[1];
+        onParseCv({
+          fileBase64: base64Data,
+          mimeType: file.type || "application/pdf",
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -55,14 +101,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   // Skill category updater
-  const handleSkillChange = (category: keyof CandidateProfile['technicalSkills'], textValue: string) => {
-    const list = textValue.split(',').map(s => s.trim()).filter(Boolean);
-    setFormData(prev => ({
+  const handleSkillChange = (
+    category: keyof CandidateProfile["technicalSkills"],
+    textValue: string,
+  ) => {
+    const list = textValue
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    setFormData((prev) => ({
       ...prev,
       technicalSkills: {
         ...prev.technicalSkills,
-        [category]: list
-      }
+        [category]: list,
+      },
     }));
   };
 
@@ -75,7 +127,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             User Profile &amp; Candidate CV
           </h1>
           <p className="text-[#2D2D2A]/60 text-xs">
-            Stored securely and analyzed by AI to evaluate job matches &amp; tailor application letters.
+            Stored securely and analyzed by AI to evaluate job matches &amp;
+            tailor application letters.
           </p>
         </div>
 
@@ -84,8 +137,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           disabled={isSaving}
           className="px-5 py-3 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center space-x-2 self-start sm:self-auto"
         >
-          {isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          <span>{isSaving ? 'Saving...' : 'Save Profile Changes'}</span>
+          {isSaving ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          <span>{isSaving ? "Saving..." : "Save Profile Changes"}</span>
         </button>
       </div>
 
@@ -99,12 +156,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Tabs */}
       <div className="flex flex-wrap border-b border-[#D4D3C9] gap-1 text-xs font-bold uppercase tracking-wider">
         {[
-          { id: 'upload', label: 'CV AI Parser & Upload', icon: Upload },
-          { id: 'personal', label: 'Personal & Summary', icon: User },
-          { id: 'skills', label: 'Technical Skills', icon: Code },
-          { id: 'experience', label: 'Work Experience', icon: Briefcase },
-          { id: 'education', label: 'Education', icon: GraduationCap },
-          { id: 'certifications', label: 'Certifications', icon: Award },
+          { id: "upload", label: "CV AI Parser & Upload", icon: Upload },
+          { id: "personal", label: "Personal & Summary", icon: User },
+          { id: "skills", label: "Technical Skills", icon: Code },
+          { id: "experience", label: "Work Experience", icon: Briefcase },
+          { id: "education", label: "Education", icon: GraduationCap },
+          { id: "certifications", label: "Certifications", icon: Award },
+          { id: "references", label: "References", icon: Users },
+          {
+            id: "certificates",
+            label: "Supporting Certificates (PDF)",
+            icon: FileCheck,
+          },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -113,8 +176,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center space-x-1.5 px-4 py-3 border-b-2 transition ${
                 activeTab === tab.id
-                  ? 'border-[#5A5A40] text-[#5A5A40] bg-[#E5E5DF]/50 rounded-t-xl'
-                  : 'border-transparent text-[#2D2D2A]/60 hover:text-[#2D2D2A]'
+                  ? "border-[#5A5A40] text-[#5A5A40] bg-[#E5E5DF]/50 rounded-t-xl"
+                  : "border-transparent text-[#2D2D2A]/60 hover:text-[#2D2D2A]"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -125,27 +188,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Tab 1: CV AI Upload & Parser */}
-      {activeTab === 'upload' && (
+      {activeTab === "upload" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             {/* File Drag & Drop Box */}
             <div className="bg-[#F8F7F4] rounded-3xl p-6 border-2 border-dashed border-[#D4D3C9] hover:border-[#5A5A40] transition text-center space-y-4 flex flex-col justify-center items-center">
               <div className="h-12 w-12 rounded-full bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9] flex items-center justify-center">
                 <Upload className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-[#2D2D2A] text-sm">Upload CV Document</h3>
-                <p className="text-xs text-[#2D2D2A]/60 mt-1">Supports PDF, DOCX, or TXT files</p>
+                <h3 className="font-serif font-bold text-[#2D2D2A] text-sm">
+                  Upload CV Document
+                </h3>
+                <p className="text-xs text-[#2D2D2A]/60 mt-1">
+                  Supports PDF, DOCX, or TXT files
+                </p>
               </div>
 
-              <label className="px-5 py-2.5 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition shadow-xs">
+              <label className="relative inline-flex px-5 py-2.5 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition shadow-xs">
                 <span>Browse File</span>
                 <input
                   type="file"
                   accept=".pdf,.docx,.doc,.txt"
                   onChange={handleFileUpload}
-                  className="hidden"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
                   disabled={isParsingCv}
                 />
               </label>
@@ -166,7 +232,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <span>Or Paste CV Text Content</span>
                 </h3>
                 <p className="text-xs text-[#2D2D2A]/60 mt-1">
-                  Paste raw text from your resume directly for instant structured extraction.
+                  Paste raw text from your resume directly for instant
+                  structured extraction.
                 </p>
                 <textarea
                   rows={6}
@@ -186,84 +253,116 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span>Run AI CV Extraction</span>
               </button>
             </div>
-
           </div>
         </div>
       )}
 
       {/* Tab 2: Personal Info & Summary */}
-      {activeTab === 'personal' && (
+      {activeTab === "personal" && (
         <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-4">
-          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">Personal Details &amp; Summary</h2>
-          
+          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">
+            Personal Details &amp; Summary
+          </h2>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Full Name</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                Full Name
+              </label>
               <input
                 type="text"
                 value={formData.fullName}
-                onChange={(e) => setFormData(p => ({ ...p, fullName: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, fullName: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Professional Title</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                Professional Title
+              </label>
               <input
                 type="text"
                 value={formData.professionalTitle}
-                onChange={(e) => setFormData(p => ({ ...p, professionalTitle: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    professionalTitle: e.target.value,
+                  }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Email Address</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                Email Address
+              </label>
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, email: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Phone Number</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                Phone Number
+              </label>
               <input
                 type="text"
                 value={formData.phone}
-                onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, phone: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Location (City, Country)</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                Location (City, Country)
+              </label>
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) => setFormData(p => ({ ...p, location: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, location: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">LinkedIn Profile</label>
+              <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                LinkedIn Profile
+              </label>
               <input
                 type="text"
-                value={formData.linkedIn || ''}
-                onChange={(e) => setFormData(p => ({ ...p, linkedIn: e.target.value }))}
+                value={formData.linkedIn || ""}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, linkedIn: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
               />
             </div>
           </div>
 
           <div className="space-y-1 pt-2">
-            <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Professional Background Summary</label>
+            <label className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+              Professional Background Summary
+            </label>
             <textarea
               rows={4}
               value={formData.summary}
-              onChange={(e) => setFormData(p => ({ ...p, summary: e.target.value }))}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, summary: e.target.value }))
+              }
               className="w-full p-3 text-xs bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A] focus:bg-white"
             />
           </div>
@@ -271,73 +370,111 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* Tab 3: Technical Skills */}
-      {activeTab === 'skills' && (
+      {activeTab === "skills" && (
         <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-4">
-          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">Technical Skills Categorization</h2>
-          <p className="text-xs text-[#2D2D2A]/60">Comma-separated list for each technical domain.</p>
+          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">
+            Technical Skills Categorization
+          </h2>
+          <p className="text-xs text-[#2D2D2A]/60">
+            Comma-separated list for each technical domain.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Systems &amp; Operating Systems</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                Systems &amp; Operating Systems
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.systemsAndOS?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('systemsAndOS', e.target.value)}
+                value={formData.technicalSkills?.systemsAndOS?.join(", ") || ""}
+                onChange={(e) =>
+                  handleSkillChange("systemsAndOS", e.target.value)
+                }
                 placeholder="Linux, Windows Server, Active Directory, VMware..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Networking &amp; Infrastructure</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                Networking &amp; Infrastructure
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.networking?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('networking', e.target.value)}
+                value={formData.technicalSkills?.networking?.join(", ") || ""}
+                onChange={(e) =>
+                  handleSkillChange("networking", e.target.value)
+                }
                 placeholder="Cisco, LAN/WAN, TCP/IP, VPN, Routing..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Software &amp; Web Development</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                Software &amp; Web Development
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.softwareDevelopment?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('softwareDevelopment', e.target.value)}
+                value={
+                  formData.technicalSkills?.softwareDevelopment?.join(", ") ||
+                  ""
+                }
+                onChange={(e) =>
+                  handleSkillChange("softwareDevelopment", e.target.value)
+                }
                 placeholder="JavaScript, TypeScript, React, Node.js, Python..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Databases &amp; SQL Querying</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                Databases &amp; SQL Querying
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.databasesAndSQL?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('databasesAndSQL', e.target.value)}
+                value={
+                  formData.technicalSkills?.databasesAndSQL?.join(", ") || ""
+                }
+                onChange={(e) =>
+                  handleSkillChange("databasesAndSQL", e.target.value)
+                }
                 placeholder="MySQL, PostgreSQL, MS SQL Server, Oracle..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Cybersecurity &amp; InfoSec</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                Cybersecurity &amp; InfoSec
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.cybersecurity?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('cybersecurity', e.target.value)}
+                value={
+                  formData.technicalSkills?.cybersecurity?.join(", ") || ""
+                }
+                onChange={(e) =>
+                  handleSkillChange("cybersecurity", e.target.value)
+                }
                 placeholder="Firewalls, SIEM, Antivirus, Vulnerability Scanning..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">IT Support &amp; Hardware Maintenance</label>
+              <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                IT Support &amp; Hardware Maintenance
+              </label>
               <input
                 type="text"
-                value={formData.technicalSkills?.itSupportAndHardware?.join(', ') || ''}
-                onChange={(e) => handleSkillChange('itSupportAndHardware', e.target.value)}
+                value={
+                  formData.technicalSkills?.itSupportAndHardware?.join(", ") ||
+                  ""
+                }
+                onChange={(e) =>
+                  handleSkillChange("itSupportAndHardware", e.target.value)
+                }
                 placeholder="Hardware diagnostics, Helpdesk ticketing, Printers..."
                 className="w-full p-2.5 bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl text-[#2D2D2A]"
               />
@@ -347,26 +484,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* Tab 4: Work Experience */}
-      {activeTab === 'experience' && (
+      {activeTab === "experience" && (
         <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-serif font-bold text-[#2D2D2A] text-base">Work Experience History</h2>
+            <h2 className="font-serif font-bold text-[#2D2D2A] text-base">
+              Work Experience History
+            </h2>
             <button
-              onClick={() => setFormData(p => ({
-                ...p,
-                workExperience: [
-                  ...p.workExperience,
-                  {
-                    id: `exp-${Date.now()}`,
-                    jobTitle: 'ICT Role',
-                    company: 'Organization',
-                    startDate: '2023-01',
-                    endDate: 'Present',
-                    isCurrent: true,
-                    responsibilities: ['Maintained ICT systems and infrastructure']
-                  }
-                ]
-              }))}
+              onClick={() =>
+                setFormData((p) => ({
+                  ...p,
+                  workExperience: [
+                    ...p.workExperience,
+                    {
+                      id: `exp-${Date.now()}`,
+                      jobTitle: "ICT Role",
+                      company: "Organization",
+                      startDate: "2023-01",
+                      endDate: "Present",
+                      isCurrent: true,
+                      responsibilities: [
+                        "Maintained ICT systems and infrastructure",
+                      ],
+                    },
+                  ],
+                }))
+              }
               className="px-3.5 py-2 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl flex items-center space-x-1"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -376,11 +519,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <div className="space-y-4">
             {formData.workExperience.map((exp, idx) => (
-              <div key={exp.id || idx} className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-3 text-xs">
+              <div
+                key={exp.id || idx}
+                className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-3 text-xs"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">Position #{idx + 1}</span>
+                  <span className="font-bold text-[#5A5A40] uppercase tracking-wider text-[10px]">
+                    Position #{idx + 1}
+                  </span>
                   <button
-                    onClick={() => setFormData(p => ({ ...p, workExperience: p.workExperience.filter((_, i) => i !== idx) }))}
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        workExperience: p.workExperience.filter(
+                          (_, i) => i !== idx,
+                        ),
+                      }))
+                    }
                     className="text-rose-700 hover:text-rose-900 font-bold text-xs uppercase tracking-wider flex items-center space-x-1"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -390,13 +545,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Job Title</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Job Title
+                    </label>
                     <input
                       type="text"
                       value={exp.jobTitle}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.workExperience];
                           updated[idx].jobTitle = val;
                           return { ...p, workExperience: updated };
@@ -407,13 +564,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Company / Employer</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Company / Employer
+                    </label>
                     <input
                       type="text"
                       value={exp.company}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.workExperience];
                           updated[idx].company = val;
                           return { ...p, workExperience: updated };
@@ -425,13 +584,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Key Responsibilities (one per line)</label>
+                  <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                    Key Responsibilities (one per line)
+                  </label>
                   <textarea
                     rows={3}
-                    value={exp.responsibilities.join('\n')}
+                    value={exp.responsibilities.join("\n")}
                     onChange={(e) => {
-                      const lines = e.target.value.split('\n');
-                      setFormData(p => {
+                      const lines = e.target.value.split("\n");
+                      setFormData((p) => {
                         const updated = [...p.workExperience];
                         updated[idx].responsibilities = lines;
                         return { ...p, workExperience: updated };
@@ -447,21 +608,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* Tab 5: Education */}
-      {activeTab === 'education' && (
+      {activeTab === "education" && (
         <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-4">
-          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">Education &amp; Academic Qualifications</h2>
+          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">
+            Education &amp; Academic Qualifications
+          </h2>
           <div className="space-y-3">
             {formData.education.map((edu, idx) => (
-              <div key={edu.id || idx} className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-2 text-xs">
+              <div
+                key={edu.id || idx}
+                className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-2 text-xs"
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Degree / Diploma</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Degree / Diploma
+                    </label>
                     <input
                       type="text"
                       value={edu.degree}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.education];
                           updated[idx].degree = val;
                           return { ...p, education: updated };
@@ -471,13 +639,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Institution</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Institution
+                    </label>
                     <input
                       type="text"
                       value={edu.institution}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.education];
                           updated[idx].institution = val;
                           return { ...p, education: updated };
@@ -494,21 +664,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* Tab 6: Certifications */}
-      {activeTab === 'certifications' && (
+      {activeTab === "certifications" && (
         <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-4">
-          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">Certifications &amp; Licenses</h2>
+          <h2 className="font-serif font-bold text-[#2D2D2A] text-base">
+            Certifications &amp; Licenses
+          </h2>
           <div className="space-y-3">
             {formData.certifications.map((cert, idx) => (
-              <div key={cert.id || idx} className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-2 text-xs">
+              <div
+                key={cert.id || idx}
+                className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-2 text-xs"
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Certification Name</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Certification Name
+                    </label>
                     <input
                       type="text"
                       value={cert.name}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.certifications];
                           updated[idx].name = val;
                           return { ...p, certifications: updated };
@@ -518,13 +695,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">Issuing Authority</label>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Issuing Authority
+                    </label>
                     <input
                       type="text"
                       value={cert.issuingOrganization}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData(p => {
+                        setFormData((p) => {
                           const updated = [...p.certifications];
                           updated[idx].issuingOrganization = val;
                           return { ...p, certifications: updated };
@@ -536,6 +715,351 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 7: References */}
+      {activeTab === "references" && (
+        <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-serif font-bold text-[#2D2D2A]">
+                Professional References
+              </h2>
+              <p className="text-xs text-[#5A5A40]">
+                Add references to be included on your automatically generated
+                CV.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const newRef: Reference = {
+                  id: `ref-${Date.now()}`,
+                  name: "New Reference",
+                  position: "Position Title",
+                  organization: "Organization / University",
+                  phone: "",
+                  email: "",
+                };
+                setFormData((p) => ({
+                  ...p,
+                  references: [...(p.references || []), newRef],
+                }));
+              }}
+              className="px-4 py-2 bg-[#F8F7F4] hover:bg-[#E5E5DF] text-[#2D2D2A] border border-[#D4D3C9] font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center space-x-1.5"
+            >
+              <Plus className="h-4 w-4 text-[#5A5A40]" />
+              <span>Add Reference</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {(formData.references || []).map((ref, idx) => (
+              <div
+                key={ref.id || idx}
+                className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl space-y-3 text-xs"
+              >
+                <div className="flex items-center justify-between border-b border-[#D4D3C9] pb-2">
+                  <span className="font-bold text-[#5A5A40] text-xs uppercase tracking-wider">
+                    Reference #{idx + 1}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setFormData((p) => ({
+                        ...p,
+                        references: p.references.filter((_, i) => i !== idx),
+                      }));
+                    }}
+                    className="p-1 text-red-600 hover:text-red-800 transition"
+                    title="Delete Reference"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={ref.name}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.references || [])];
+                          updated[idx] = { ...updated[idx], name: val };
+                          return { ...p, references: updated };
+                        });
+                      }}
+                      className="w-full p-2 bg-white border border-[#D4D3C9] rounded-xl mt-1 text-[#2D2D2A]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Position / Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={ref.position}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.references || [])];
+                          updated[idx] = { ...updated[idx], position: val };
+                          return { ...p, references: updated };
+                        });
+                      }}
+                      className="w-full p-2 bg-white border border-[#D4D3C9] rounded-xl mt-1 text-[#2D2D2A]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Organization / University *
+                    </label>
+                    <input
+                      type="text"
+                      value={ref.organization}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.references || [])];
+                          updated[idx] = { ...updated[idx], organization: val };
+                          return { ...p, references: updated };
+                        });
+                      }}
+                      className="w-full p-2 bg-white border border-[#D4D3C9] rounded-xl mt-1 text-[#2D2D2A]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={ref.phone || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.references || [])];
+                          updated[idx] = { ...updated[idx], phone: val };
+                          return { ...p, references: updated };
+                        });
+                      }}
+                      placeholder="+265 999 123 456"
+                      className="w-full p-2 bg-white border border-[#D4D3C9] rounded-xl mt-1 text-[#2D2D2A]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 lg:col-span-2">
+                    <label className="font-bold text-[#5A5A40] text-[10px] uppercase tracking-wider">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={ref.email || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.references || [])];
+                          updated[idx] = { ...updated[idx], email: val };
+                          return { ...p, references: updated };
+                        });
+                      }}
+                      placeholder="reference@example.com"
+                      className="w-full p-2 bg-white border border-[#D4D3C9] rounded-xl mt-1 text-[#2D2D2A]"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {(!formData.references || formData.references.length === 0) && (
+              <div className="text-center py-8 border-2 border-dashed border-[#D4D3C9] rounded-2xl text-[#5A5A40] text-xs">
+                No references added yet. Click &quot;Add Reference&quot; above
+                to include academic or professional referees on your CV.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 8: Supporting Certificates (PDF) */}
+      {activeTab === "certificates" && (
+        <div className="bg-white rounded-3xl p-6 border border-[#D4D3C9] space-y-6">
+          <div>
+            <h2 className="text-lg font-serif font-bold text-[#2D2D2A]">
+              Supporting Certificates &amp; Documents (PDF)
+            </h2>
+            <p className="text-xs text-[#5A5A40] mt-1">
+              Upload PDF copies of your degree certificates, diplomas,
+              professional certifications, or transcript copies. These will be
+              automatically attached when you apply for jobs.
+            </p>
+          </div>
+
+          {certError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs">
+              {certError}
+            </div>
+          )}
+
+          {/* Certificate PDF Upload Box */}
+          <div className="bg-[#F8F7F4] rounded-2xl p-6 border-2 border-dashed border-[#D4D3C9] hover:border-[#5A5A40] transition text-center space-y-3">
+            <div className="h-10 w-10 rounded-full bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9] flex items-center justify-center mx-auto">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-bold text-xs text-[#2D2D2A]">
+                Upload Certificate PDF
+              </p>
+              <p className="text-[11px] text-[#5A5A40]">
+                PDF files only (Max 10 MB per file)
+              </p>
+            </div>
+
+            <label className="inline-block px-4 py-2 bg-[#5A5A40] hover:bg-[#4A4A35] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition shadow-xs">
+              <span>Select PDF Certificate</span>
+              <input
+                type="file"
+                accept="application/pdf"
+                multiple
+                onChange={(e) => {
+                  setCertError(null);
+                  const files: File[] = Array.from(e.target.files || []);
+                  files.forEach((file: File) => {
+                    if (
+                      !file.name.toLowerCase().endsWith(".pdf") &&
+                      file.type !== "application/pdf"
+                    ) {
+                      setCertError(
+                        `File "${file.name}" is not a PDF. Only PDF documents are allowed.`,
+                      );
+                      return;
+                    }
+                    if (file.size > 15 * 1024 * 1024) {
+                      setCertError(`File "${file.name}" exceeds 15 MB limit.`);
+                      return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const dataUrl = event.target?.result as string;
+                      const cleanName = file.name
+                        .replace(/\.pdf$/i, "")
+                        .replace(/[-_]/g, " ");
+                      const newCert: UploadedCertificate = {
+                        id: `cert-doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                        name:
+                          cleanName.charAt(0).toUpperCase() +
+                          cleanName.slice(1),
+                        fileName: file.name,
+                        fileSize: file.size,
+                        uploadedAt: new Date().toISOString(),
+                        fileDataUrl: dataUrl,
+                      };
+                      setFormData((p) => ({
+                        ...p,
+                        certificates: [...(p.certificates || []), newCert],
+                      }));
+                    };
+                    reader.readAsDataURL(file);
+                  });
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </label>
+          </div>
+
+          {/* Certificate List */}
+          <div className="space-y-3">
+            {(formData.certificates || []).map((cert, idx) => (
+              <div
+                key={cert.id || idx}
+                className="p-4 bg-[#F8F7F4] border border-[#D4D3C9] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-xl bg-white border border-[#D4D3C9] flex items-center justify-center text-[#5A5A40] font-bold shrink-0">
+                    PDF
+                  </div>
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      value={cert.name}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((p) => {
+                          const updated = [...(p.certificates || [])];
+                          updated[idx] = { ...updated[idx], name: val };
+                          return { ...p, certificates: updated };
+                        });
+                      }}
+                      className="font-bold text-[#2D2D2A] bg-white border border-[#D4D3C9] px-2 py-1 rounded-lg text-xs"
+                      title="Rename certificate document title"
+                    />
+                    <div className="flex items-center space-x-2 text-[10px] text-[#5A5A40]">
+                      <span>{cert.fileName}</span>
+                      <span>&bull;</span>
+                      <span>
+                        {(cert.fileSize / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                      <span>&bull;</span>
+                      <span>
+                        Uploaded{" "}
+                        {new Date(cert.uploadedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 self-end sm:self-auto">
+                  <button
+                    onClick={() => {
+                      const win = window.open();
+                      if (win) {
+                        win.document.write(
+                          `<iframe src="${cert.fileDataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`,
+                        );
+                      }
+                    }}
+                    className="p-2 bg-white hover:bg-[#E5E5DF] text-[#2D2D2A] border border-[#D4D3C9] rounded-xl transition flex items-center space-x-1"
+                    title="Preview PDF Certificate"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-[#5A5A40]" />
+                    <span>Preview</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setFormData((p) => ({
+                        ...p,
+                        certificates: (p.certificates || []).filter(
+                          (_, i) => i !== idx,
+                        ),
+                      }));
+                    }}
+                    className="p-2 bg-white hover:bg-red-50 text-red-600 border border-[#D4D3C9] rounded-xl transition flex items-center space-x-1"
+                    title="Remove Certificate"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Remove</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {(!formData.certificates || formData.certificates.length === 0) && (
+              <div className="text-center py-8 border-2 border-dashed border-[#D4D3C9] rounded-2xl text-[#5A5A40] text-xs">
+                No supporting certificates uploaded yet. Upload your Degree,
+                Diplomas, or IT Certifications above to include them in job
+                applications.
+              </div>
+            )}
           </div>
         </div>
       )}

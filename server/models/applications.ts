@@ -11,16 +11,19 @@ interface UpdateTrackedApplication {
 export async function initializeTrackedApplicationsTable() {
   await db.query(`
         CREATE TABLE IF NOT EXISTS tracked_applications (
-          id VARCHAR(36) PRIMARY KEY,
-          google_id VARCHAR(64) UNIQUE,
-          job_id VARCHAR(36) NOT NULL,
-          status VARCHAR(50) NOT NULL,
-          application_date DATE NULL,
-          generated_letter LONGTEXT NULL,
-          notes TEXT NULL,
-          follow_up_reminder_date DATE NULL,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
+    id VARCHAR(36) PRIMARY KEY,
+    google_id VARCHAR(64) NOT NULL,
+    job_id VARCHAR(36) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    application_date DATE NULL,
+    generated_letter LONGTEXT NULL,
+    notes TEXT NULL,
+    follow_up_reminder_date DATE NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (google_id) REFERENCES candidate_profile(google_id) ON DELETE CASCADE
+);
+
     `);
 
   console.log("Tracked applications table ready");

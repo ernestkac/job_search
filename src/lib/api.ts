@@ -4,14 +4,10 @@ import {
   JobListing,
   JobMatchAnalysis,
   TrackedApplication,
+  SendGmailRequestPayload,
+  ApiResponse,
+  ApiEmailAttachment,
 } from "../types";
-
-// Explicit structure for the unified backend API response
-interface ApiResponse<T = any> {
-  success: boolean;
-  error?: string;
-  [key: string]: any;
-}
 
 export async function apiFetch<T = any>(
   url: string,
@@ -144,6 +140,67 @@ export async function apiDeleteApplication(
   const data = await apiFetch(`/api/applications/${id}`, { method: "DELETE" });
   if (data.success) return data.applications;
   throw new Error(data.error || "Failed to delete application");
+}
+
+function arrayBufferToBase64(buffer?: ArrayBuffer): string | undefined {
+  if (!buffer) return undefined;
+
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+
+  return btoa(binary);
+}
+
+export async function apiSendGmailMessage(
+  payload: SendGmailRequestPayload,
+): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  requiresGmailAuthorization?: boolean;
+}> {
+  const token = localStorage.getItem("token");
+  const serializedPayload = {
+    ...payload,
+    attachments: (payload.attachments || []).map((attachment) => ({
+      ...attachment,
+      base64: attachment.base64 || arrayBufferToBase64(attachment.arrayBuffer),
+    })),
+  };
+
+  try {
+    const response = await fetch("/api/gmail/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(serializedPayload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success) {
+      return {
+        success: true,
+        messageId: data.messageId,
+      };
+    }
+
+    return {
+      success: false,
+      error: data.error || `Request failed: ${response.status}`,
+      requiresGmailAuthorization: data.requiresGmailAuthorization,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error?.message || "Failed to send Gmail message",
+    };
+  }
 }
 
 export function computeInstantMatch(

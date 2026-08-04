@@ -1,23 +1,6 @@
-import React from "react";
-import {
-  JobFilterState,
-  JobListing,
-  JobMatchAnalysis,
-  TrackedApplication,
-} from "../types";
-import {
-  Search,
-  Filter,
-  Calendar,
-  MapPin,
-  Briefcase,
-  CheckCircle2,
-  Sparkles,
-  XCircle,
-  ArrowUpRight,
-  FileText,
-  BookmarkCheck,
-} from "lucide-react";
+import React from 'react';
+import { JobFilterState, JobListing, JobMatchAnalysis, TrackedApplication } from '../types';
+import { Search, Filter, Calendar, MapPin, Briefcase, CheckCircle2, Sparkles, XCircle, ArrowUpRight, FileText, BookmarkCheck } from 'lucide-react';
 
 interface JobExplorerViewProps {
   jobs: JobListing[];
@@ -31,20 +14,20 @@ interface JobExplorerViewProps {
 }
 
 const ALL_CATEGORIES = [
-  "All",
-  "IT Officer",
-  "ICT Officer",
-  "Systems Administrator",
-  "Network Administrator",
-  "Software Developer",
-  "Web Developer",
-  "Database Administrator",
-  "IT Support",
-  "ICT Technician",
-  "Cybersecurity",
-  "Information Systems",
-  "Systems Analyst",
-  "Technical Project Management",
+  'All',
+  'IT Officer',
+  'ICT Officer',
+  'Systems Administrator',
+  'Network Administrator',
+  'Software Developer',
+  'Web Developer',
+  'Database Administrator',
+  'IT Support',
+  'ICT Technician',
+  'Cybersecurity',
+  'Information Systems',
+  'Systems Analyst',
+  'Technical Project Management',
 ];
 
 export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
@@ -57,17 +40,17 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
   onGenerateLetter,
   onTrackJob,
 }) => {
-  const trackedJobIds = new Set(applications.map((a) => a.jobId));
+  const trackedCount = applications.length;
 
   const handleResetFilters = () => {
     setFilterState({
-      searchQuery: "",
-      category: "All",
+      searchQuery: '',
+      category: 'All',
       minScore: 0,
-      location: "All",
-      workType: "All",
+      location: 'All',
+      workType: 'All',
       hideExpired: true,
-      statusFilter: "All",
+      statusFilter: 'All',
     });
   };
 
@@ -80,16 +63,18 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
             ICT &amp; Technical Job Listings
           </h1>
           <p className="text-[#2D2D2A]/60 text-xs">
-            Monitored &amp; parsed from jobsearchmalawi.com with AI profile
-            matching
+            Monitored &amp; parsed from jobsearchmalawi.com with AI profile matching
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs text-[#5A5A40] bg-white px-3.5 py-2 rounded-xl border border-[#D4D3C9] shadow-xs">
-          <span className="font-serif font-bold text-sm text-[#2D2D2A]">
-            {jobs.length}
-          </span>
-          <span>total opportunities loaded</span>
+          <span className="font-serif font-bold text-sm text-[#2D2D2A]">{jobs.length}</span>
+          <span>available vacancies</span>
+          {trackedCount > 0 && (
+            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40] bg-[#F8F7F4] px-2 py-0.5 rounded-lg border border-[#D4D3C9]">
+              {trackedCount} in tracker
+            </span>
+          )}
         </div>
       </div>
 
@@ -103,21 +88,14 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Keyword Search */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">
-              Search Keywords
-            </label>
+            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">Search Keywords</label>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#5A5A40]/50" />
               <input
                 type="text"
                 placeholder="Title, employer, SQL, Linux..."
                 value={filterState.searchQuery}
-                onChange={(e) =>
-                  setFilterState((prev) => ({
-                    ...prev,
-                    searchQuery: e.target.value,
-                  }))
-                }
+                onChange={(e) => setFilterState(prev => ({ ...prev, searchQuery: e.target.value }))}
                 className="w-full pl-9 pr-3 py-2 text-xs bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5A5A40] text-[#2D2D2A]"
               />
             </div>
@@ -125,40 +103,24 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
 
           {/* Job Category */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">
-              ICT Job Category
-            </label>
+            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">ICT Job Category</label>
             <select
               value={filterState.category}
-              onChange={(e) =>
-                setFilterState((prev) => ({
-                  ...prev,
-                  category: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilterState(prev => ({ ...prev, category: e.target.value }))}
               className="w-full px-3 py-2 text-xs bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5A5A40] text-[#2D2D2A]"
             >
-              {ALL_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
+              {ALL_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
           {/* Location Filter */}
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">
-              Location
-            </label>
+            <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">Location</label>
             <select
               value={filterState.location}
-              onChange={(e) =>
-                setFilterState((prev) => ({
-                  ...prev,
-                  location: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilterState(prev => ({ ...prev, location: e.target.value }))}
               className="w-full px-3 py-2 text-xs bg-[#F8F7F4] border border-[#D4D3C9] rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5A5A40] text-[#2D2D2A]"
             >
               <option value="All">All Malawi Locations</option>
@@ -171,12 +133,8 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
           {/* Compatibility score slider */}
           <div className="space-y-1">
             <div className="flex justify-between items-center text-xs">
-              <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">
-                Min Match Score
-              </label>
-              <span className="font-serif font-bold text-[#5A5A40]">
-                {filterState.minScore}%+
-              </span>
+              <label className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">Min Match Score</label>
+              <span className="font-serif font-bold text-[#5A5A40]">{filterState.minScore}%+</span>
             </div>
             <input
               type="range"
@@ -184,12 +142,7 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
               max="90"
               step="10"
               value={filterState.minScore}
-              onChange={(e) =>
-                setFilterState((prev) => ({
-                  ...prev,
-                  minScore: Number(e.target.value),
-                }))
-              }
+              onChange={(e) => setFilterState(prev => ({ ...prev, minScore: Number(e.target.value) }))}
               className="w-full accent-[#5A5A40] cursor-pointer h-2 bg-[#E5E5DF] rounded-lg"
             />
           </div>
@@ -200,12 +153,7 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
             <input
               type="checkbox"
               checked={filterState.hideExpired}
-              onChange={(e) =>
-                setFilterState((prev) => ({
-                  ...prev,
-                  hideExpired: e.target.checked,
-                }))
-              }
+              onChange={(e) => setFilterState(prev => ({ ...prev, hideExpired: e.target.checked }))}
               className="rounded text-[#5A5A40] focus:ring-[#5A5A40] h-4 w-4"
             />
             <span>Hide expired vacancies (closing date passed)</span>
@@ -226,12 +174,9 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
           <div className="mx-auto h-12 w-12 rounded-full bg-[#F8F7F4] text-[#5A5A40] border border-[#D4D3C9] flex items-center justify-center">
             <Search className="h-6 w-6" />
           </div>
-          <h3 className="font-serif font-bold text-[#2D2D2A]">
-            No vacancies match your current filter criteria
-          </h3>
+          <h3 className="font-serif font-bold text-[#2D2D2A]">No vacancies match your current filter criteria</h3>
           <p className="text-xs text-[#2D2D2A]/60 max-w-sm mx-auto">
-            Try adjusting the search query, lowering the match score threshold,
-            or enabling expired vacancies.
+            Try adjusting the search query, lowering the match score threshold, or enabling expired vacancies.
           </p>
           <button
             onClick={handleResetFilters}
@@ -245,7 +190,7 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
           {jobs.map((job) => {
             const match = matchesMap[job.id];
             const score = match ? match.compatibilityScore : 70;
-            const isSaved = trackedJobIds.has(job.id);
+            const isSaved = applications.some(a => a.jobId === job.id);
 
             return (
               <div
@@ -285,9 +230,7 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
                     >
                       {job.title}
                     </h2>
-                    <p className="text-xs font-bold text-[#5A5A40] mt-1">
-                      {job.employer}
-                    </p>
+                    <p className="text-xs font-bold text-[#5A5A40] mt-1">{job.employer}</p>
                     <div className="flex items-center space-x-4 text-xs text-[#2D2D2A]/60 mt-1">
                       <span className="flex items-center space-x-1">
                         <MapPin className="h-3.5 w-3.5 text-[#5A5A40]" />
@@ -324,9 +267,7 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
                         <Sparkles className="h-3 w-3 text-amber-600" />
                         <span>AI Match Analysis:</span>
                       </p>
-                      <p className="text-[#2D2D2A]/70 line-clamp-2 text-[11px]">
-                        {match.matchReasoning}
-                      </p>
+                      <p className="text-[#2D2D2A]/70 line-clamp-2 text-[11px]">{match.matchReasoning}</p>
                     </div>
                   )}
                 </div>
@@ -341,17 +282,17 @@ export const JobExplorerView: React.FC<JobExplorerViewProps> = ({
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </button>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => onTrackJob(job)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1 ${
                         isSaved
-                          ? "bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9]"
-                          : "bg-[#F8F7F4] hover:bg-[#E5E5DF] text-[#2D2D2A] border border-[#D4D3C9]"
+                          ? 'bg-[#E5E5DF] text-[#5A5A40] border border-[#D4D3C9]'
+                          : 'bg-[#F8F7F4] hover:bg-[#E5E5DF] text-[#2D2D2A] border border-[#D4D3C9]'
                       }`}
                     >
                       <BookmarkCheck className="h-3.5 w-3.5" />
-                      <span>{isSaved ? "Saved" : "Save"}</span>
+                      <span>{isSaved ? 'Saved' : 'Save to Tracker'}</span>
                     </button>
 
                     <button

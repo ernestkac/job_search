@@ -4,67 +4,185 @@ import { Request, Response } from "express";
 import {
   saveCandidateProfile,
   getCandidateProfile,
+  updateCandidateProfile,
+  getGmailCredentials,
+  updateGmailCredentials,
 } from "../models/candidateProfile";
 import { INITIAL_CANDIDATE_PROFILE } from "@/src/data/mockJobs";
 import { CandidateProfile } from "@/src/types";
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const clientId =
+  process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+const clientSecret =
+  process.env.GOOGLE_CLIENT_SECRET || process.env.VITE_GOOGLE_CLIENT_SECRET;
+const redirectUri = process.env.GOOGLE_REDIRECT_URI || "postmessage";
 
 export const verifyGoogleToken = async (req: Request, res: Response) => {
-  const { idToken } = req.body;
-  if (!idToken) {
-    console.error("Missing Google ID token in request body");
+  const { code } = req.body;
+
+  if (!code) {
+    console.error("Missing Google authorization code in request body");
     return res.status(400).json({
-      error: "Missing Google ID token",
+      error: "Missing Google authorization code",
     });
   }
 
-  const ticket = await googleClient.verifyIdToken({
-    idToken,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
+  if (!clientId || !clientSecret) {
+    console.error(
+      "Google OAuth client credentials are not configured on the server",
+    );
+    return res.status(500).json({
+      error: "Google OAuth is not configured on the server",
+    });
+  }
 
-  const payload = ticket.getPayload();
+  const googleClient = new OAuth2Client(clientId, clientSecret, redirectUri);
 
-  if (!payload) {
-    console.error("Invalid Google ID token");
+  try {
+    const { tokens } = await googleClient.getToken({
+      code,
+      redirect_uri: redirectUri,
+    });
+    const idToken = tokens.id_token;
+
+    if (!idToken) {
+      console.error("Google authorization code did not return an ID token");
+      return res.status(401).json({
+        error: "Google authorization did not return an ID token",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      console.error("Invalid Google token payload");
+      return res.status(401).json({
+        error: "Invalid Google token",
+      });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email;
+    const fullName = payload.name;
+    const picture = payload.picture;
+    const partialCandidate: Partial<CandidateProfile> = {
+      email,
+      fullName,
+      photoUrl: picture ?? "",
+    };
+    const candidate: CandidateProfile = {
+      ...INITIAL_CANDIDATE_PROFILE,
+      ...partialCandidate,
+    };
+
+    let storedCandidate = await getCandidateProfile(googleId);
+
+    if (!storedCandidate) {
+      await saveCandidateProfile(googleId, undefined, picture ?? "", candidate);
+    } else {
+      await updateCandidateProfile(googleId, candidate);
+    }
+
+    storedCandidate = await getCandidateProfile(googleId);
+
+    const token = jwt.sign(
+      {
+        googleId,
+      },
+      process.env.JWT_SECRET!,
+      {
+        expiresIn: "7d",
+      },
+    );
+
+    return res.json({
+      status: "ok",
+      token,
+      candidate: storedCandidate,
+      storedCandidate,
+    });
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.error_description ||
+      error?.message ||
+      "Unable to complete Google authorization";
+
+    console.error("Google authorization error", errorMessage);
     return res.status(401).json({
-      error: "Invalid Google token",
+      error: errorMessage,
+    });
+  }
+};
+
+export const verifyGmailAuthorization = async (req: Request, res: Response) => {
+  const googleId = (req as any).user?.googleId;
+  const { code } = req.body;
+
+  if (!googleId) {
+    return res.status(401).json({
+      success: false,
+      error: "Authentication required.",
     });
   }
 
-  const googleId = payload.sub;
-  const email = payload.email;
-  const fullName = payload.name;
-  const picture = payload.picture;
-  const emailVerified = payload.email_verified;
+  if (!code) {
+    return res.status(400).json({
+      success: false,
+      error: "Missing Google authorization code.",
+    });
+  }
 
-  let patialCandidate: Partial<CandidateProfile> = { email, fullName };
-  let candidate: CandidateProfile = {
-    ...INITIAL_CANDIDATE_PROFILE,
-    ...patialCandidate,
-  };
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({
+      success: false,
+      error: "Google OAuth is not configured on the server",
+    });
+  }
 
-  let storedCandidate = await getCandidateProfile(googleId);
+  const googleClient = new OAuth2Client(clientId, clientSecret, redirectUri);
 
-  if (!storedCandidate)
-    await saveCandidateProfile(googleId, picture ?? "", candidate);
+  try {
+    const { tokens } = await googleClient.getToken({
+      code,
+      redirect_uri: redirectUri,
+    });
 
-  storedCandidate = await getCandidateProfile(googleId);
+    const existingCredentials = await getGmailCredentials(googleId);
+    const refreshToken =
+      tokens.refresh_token || existingCredentials?.refreshToken || "";
 
-  const token = jwt.sign(
-    {
-      googleId,
-    },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn: "7d",
-    },
-  );
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        error: "Google did not return a Gmail refresh token.",
+      });
+    }
 
-  res.json({
-    status: "ok",
-    token,
-    storedCandidate,
-  });
+    await updateGmailCredentials(googleId, {
+      refreshToken,
+      accessToken: tokens.access_token || existingCredentials?.accessToken,
+      expiryDate: tokens.expiry_date || existingCredentials?.expiryDate,
+    });
+
+    return res.json({
+      success: true,
+      message: "Gmail authorization completed.",
+    });
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.error_description ||
+      error?.message ||
+      "Unable to complete Gmail authorization";
+
+    console.error("Gmail authorization error", errorMessage);
+    return res.status(401).json({
+      success: false,
+      error: errorMessage,
+    });
+  }
 };

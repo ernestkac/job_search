@@ -34,6 +34,7 @@ import { JobDetailModal } from "./components/JobDetailModal";
 import { ProfileView } from "./components/ProfileView";
 import { ApplicationTrackerView } from "./components/ApplicationTrackerView";
 import { CoverLetterModal } from "./components/CoverLetterModal";
+import { ApplicationModal } from "./components/ApplicationModal";
 import { ArchitectureModal } from "./components/ArchitectureModal";
 import { INITIAL_CANDIDATE_PROFILE, INITIAL_MOCK_JOBS } from "./data/mockJobs";
 import { RefreshCw, PlusCircle, Globe, X } from "lucide-react";
@@ -70,6 +71,15 @@ export default function App() {
     employer: string;
     jobId: string;
   } | null>(null);
+  const [applicationPortalState, setApplicationPortalState] = useState<{
+    isOpen: boolean;
+    job: JobListing | null;
+    coverLetter: string;
+  }>({
+    isOpen: false,
+    job: null,
+    coverLetter: "",
+  });
   const [isScrapeModalOpen, setIsScrapeModalOpen] = useState(false);
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
   const [ingestInputUrl, setIngestInputUrl] = useState("");
@@ -222,6 +232,26 @@ export default function App() {
     }
   };
 
+  const handleOpenApplicationPortal = (
+    letterText: string,
+    job?: JobListing | null,
+  ) => {
+    const targetJob =
+      job ?? jobs.find((j) => j.id === activeLetterData?.jobId) ?? selectedJob;
+
+    if (!targetJob) {
+      alert("Select a job first before opening the Gmail application portal.");
+      return;
+    }
+
+    setActiveLetterData(null);
+    setApplicationPortalState({
+      isOpen: true,
+      job: targetJob,
+      coverLetter: letterText,
+    });
+  };
+
   // Action: Save / Track job
   const handleTrackJob = async (job: JobListing) => {
     const existing = applications.find((a) => a.jobId === job.id);
@@ -344,7 +374,7 @@ export default function App() {
         isRefreshingJobs={isRefreshingJobs}
         onRefreshJobs={handleRefreshJobs}
         candidateName={profile.fullName}
-        candidateEmail={profile.email}
+        candidatePhotoUrl={profile.photoUrl}
         onSignOut={handleSignOut}
       />
 
@@ -431,6 +461,16 @@ export default function App() {
                     });
                   }
                 }}
+                onViewJobDetails={(app) => {
+                  const matchedJob = jobs.find((job) => job.id === app.jobId);
+                  if (matchedJob) {
+                    handleSelectJob(matchedJob);
+                  } else {
+                    alert(
+                      "The full job details for this application are not available yet.",
+                    );
+                  }
+                }}
               />
             )}
           </>
@@ -468,7 +508,34 @@ export default function App() {
             handleGenerateLetter(target, note);
           }
         }}
+        onOpenApplicationPortal={(letterText) => {
+          handleOpenApplicationPortal(letterText);
+        }}
       />
+
+      {applicationPortalState.isOpen && applicationPortalState.job && (
+        <ApplicationModal
+          isOpen={applicationPortalState.isOpen}
+          onClose={() =>
+            setApplicationPortalState({
+              isOpen: false,
+              job: null,
+              coverLetter: "",
+            })
+          }
+          job={applicationPortalState.job}
+          candidateProfile={profile}
+          coverLetterText={applicationPortalState.coverLetter}
+          onApplicationSent={(applicationRecord) => {
+            setApplications((prev) => [applicationRecord, ...prev]);
+            setApplicationPortalState({
+              isOpen: false,
+              job: null,
+              coverLetter: "",
+            });
+          }}
+        />
+      )}
 
       <ArchitectureModal
         isOpen={isArchModalOpen}
